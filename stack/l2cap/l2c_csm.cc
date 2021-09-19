@@ -29,6 +29,7 @@
 #include "common/time_util.h"
 #include "l2c_int.h"
 #include "l2cdefs.h"
+#include "osi/include/allocator.h"
 #include "osi/include/log.h"
 #include "stack/btm/btm_sec.h"
 #include "stack/include/acl_api.h"
@@ -1576,8 +1577,9 @@ void l2c_enqueue_peer_data(tL2C_CCB* p_ccb, BT_HDR* p_buf) {
         "p_ccb->local_cid = %u p_ccb->remote_cid = %u",
         p_ccb, p_ccb->in_use, p_ccb->chnl_state, p_ccb->local_cid,
         p_ccb->remote_cid);
+  } else {
+    fixed_queue_enqueue(p_ccb->xmit_hold_q, p_buf);
   }
-  fixed_queue_enqueue(p_ccb->xmit_hold_q, p_buf);
 
   l2cu_check_channel_congestion(p_ccb);
 

@@ -25,8 +25,6 @@
 #include "osi/include/osi.h"  // INVALID_FD
 #include "stack/include/bt_types.h"
 
-static const char HCI_MODULE[] = "hci_module";
-
 ///// LEGACY DEFINITIONS /////
 
 /* Message event mask across Host/Controller lib and stack */
@@ -75,5 +73,4 @@ typedef struct hci_t {
 
 const hci_t* hci_layer_get_interface();
 
-void hci_layer_cleanup_interface();
 bool hci_is_root_inflammation_event_received();

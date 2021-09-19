@@ -29,12 +29,14 @@
 
 #include <base/bind.h>
 #include <base/location.h>
+
 #include <cstdint>
 
 #include "btif/include/btif_config.h"
 #include "common/metrics.h"
 #include "device/include/controller.h"
 #include "main/shim/hci_layer.h"
+#include "osi/include/allocator.h"
 #include "osi/include/log.h"
 #include "stack/include/acl_hci_link_interface.h"
 #include "stack/include/ble_acl_interface.h"
@@ -1534,14 +1536,7 @@ static void btu_hcif_command_status_evt(uint8_t status, BT_HDR* command,
  *
  ******************************************************************************/
 static void btu_hcif_hardware_error_evt(uint8_t* p) {
-  HCI_TRACE_ERROR("Ctlr H/w error event - code:0x%x", *p);
-  if (hci_is_root_inflammation_event_received()) {
-    // Ignore the hardware error event here as we have already received
-    // root inflammation event earlier.
-    HCI_TRACE_ERROR("H/w error event after root inflammation event!");
-    return;
-  }
-
+  LOG_ERROR("UNHANDLED Ctlr H/w error event - code:0x%x", *p);
   BTA_sys_signal_hw_error();
 }
 

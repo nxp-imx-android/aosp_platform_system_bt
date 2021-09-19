@@ -34,18 +34,18 @@
 #include <linux/if_ether.h>
 #include <linux/if_tun.h>
 #include <net/if.h>
+#include <poll.h>
 #include <sys/ioctl.h>
-#include <sys/poll.h>
 #include <unistd.h>
 
 #include "bt_target.h"  // Must be first to define build configuration
-
 #include "bta/include/bta_pan_api.h"
 #include "btif/include/btif_common.h"
 #include "btif/include/btif_pan_internal.h"
 #include "btif/include/btif_sock_thread.h"
 #include "device/include/controller.h"
 #include "include/hardware/bt_pan.h"
+#include "osi/include/allocator.h"
 #include "osi/include/compat.h"
 #include "osi/include/log.h"
 #include "osi/include/osi.h"

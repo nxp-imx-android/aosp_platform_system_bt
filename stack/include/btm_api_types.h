@@ -20,20 +20,19 @@
 #define BTM_API_TYPES_H
 
 #include <base/strings/stringprintf.h>
+
 #include <cstdint>
 #include <string>
 
 #include "device/include/esco_parameters.h"
 #include "internal_include/bt_target.h"
+#include "stack/include/bt_name.h"
 #include "stack/include/btm_status.h"
 #include "stack/include/hci_mode.h"
 #include "stack/include/hcidefs.h"
 #include "stack/include/smp_api_types.h"
 #include "types/ble_address_with_type.h"
 #include "types/bt_transport.h"
-
-/* Device name of peer (may be truncated to save space in BTM database) */
-typedef uint8_t tBTM_BD_NAME[BTM_MAX_REM_BD_NAME_LEN + 1];
 
 /* Structure returned with Vendor Specific Command complete callback */
 typedef struct {
@@ -250,6 +249,9 @@ enum {
 #define BTM_EIR_UNKNOWN 2
 
 typedef uint8_t tBTM_EIR_SEARCH_RESULT;
+
+/* 0x2C */
+#define BTM_EIR_RSI_TYPE HCI_EIR_RSI_TYPE
 
 typedef enum : uint8_t {
   BTM_BLE_SEC_NONE = 0,

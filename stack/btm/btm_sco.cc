@@ -24,11 +24,13 @@
  ******************************************************************************/
 
 #include <base/strings/stringprintf.h>
+
 #include <cstdint>
 #include <string>
 
 #include "device/include/controller.h"
 #include "device/include/esco_parameters.h"
+#include "osi/include/allocator.h"
 #include "osi/include/log.h"
 #include "osi/include/osi.h"
 #include "stack/btm/btm_sec.h"
@@ -137,8 +139,7 @@ static void btm_esco_conn_rsp(uint16_t sco_inx, uint8_t hci_status,
     if (controller_get_interface()
             ->supports_enhanced_setup_synchronous_connection()) {
       /* Use the saved SCO routing */
-      p_setup->input_data_path = p_setup->output_data_path =
-          btm_cb.sco_cb.sco_route;
+      p_setup->input_data_path = p_setup->output_data_path = ESCO_DATA_PATH;
 
       BTM_TRACE_DEBUG(
           "%s: txbw 0x%x, rxbw 0x%x, lat 0x%x, retrans 0x%02x, "
@@ -158,6 +159,16 @@ static void btm_esco_conn_rsp(uint16_t sco_inx, uint8_t hci_status,
           p_setup->retransmission_effort, p_setup->packet_types);
     }
   }
+}
+
+// Return the active (first connected) SCO connection block
+static tSCO_CONN* btm_get_active_sco() {
+  for (auto& link : btm_cb.sco_cb.sco_db) {
+    if (link.state == SCO_ST_CONNECTED) {
+      return &link;
+    }
+  }
+  return nullptr;
 }
 
 /*******************************************************************************
@@ -186,13 +197,27 @@ void btm_route_sco_data(BT_HDR* p_msg) {
     return;
   }
   LOG_INFO("Received SCO packet from HCI. Dropping it since no handler so far");
-  // TODO(b/195344796): Implement the SCO over HCI data path
-  // std::vector<uint8_t> data(payload, payload + length);
+  uint16_t handle = handle_with_flags & 0xeff;
+  auto* active_sco = btm_get_active_sco();
+  if (active_sco != nullptr && active_sco->hci_handle == handle) {
+    // TODO: For MSBC, we need to decode here
+    bluetooth::audio::sco::write(payload, length);
+  }
   osi_free(p_msg);
+  // For Chrome OS, we send the outgoing data after receiving an incoming one
+  uint8_t out_buf[BTM_SCO_DATA_SIZE_MAX];
+  auto size_read = bluetooth::audio::sco::read(out_buf, BTM_SCO_DATA_SIZE_MAX);
+  auto data = std::vector<uint8_t>(out_buf, out_buf + size_read);
+  // TODO: For MSBC, we need to encode here
+  btm_send_sco_packet(std::move(data));
 }
 
-void btm_send_sco_packet(std::vector<uint8_t> data, uint16_t sco_handle) {
-  BT_HDR* packet = btm_sco_make_packet(std::move(data), sco_handle);
+void btm_send_sco_packet(std::vector<uint8_t> data) {
+  auto* active_sco = btm_get_active_sco();
+  if (active_sco == nullptr || data.empty()) {
+    return;
+  }
+  BT_HDR* packet = btm_sco_make_packet(std::move(data), active_sco->hci_handle);
   bte_main_hci_send(packet, BT_EVT_TO_LM_HCI_SCO);
 }
 
@@ -307,8 +332,7 @@ static tBTM_STATUS btm_send_connect_request(uint16_t acl_handle,
       LOG_INFO("Sending enhanced SCO connect request over handle:0x%04x",
                acl_handle);
       /* Use the saved SCO routing */
-      p_setup->input_data_path = p_setup->output_data_path =
-          btm_cb.sco_cb.sco_route;
+      p_setup->input_data_path = p_setup->output_data_path = ESCO_DATA_PATH;
       LOG(INFO) << __func__ << std::hex << ": enhanced parameter list"
                 << " txbw=0x" << unsigned(p_setup->transmit_bandwidth)
                 << ", rxbw=0x" << unsigned(p_setup->receive_bandwidth)
@@ -776,6 +800,8 @@ void btm_sco_connected(tHCI_STATUS hci_status, const RawAddress& bda,
 
       (*p->p_conn_cb)(xx);
 
+      bluetooth::audio::sco::open();
+
       return;
     }
   }
@@ -921,6 +947,8 @@ void btm_sco_on_disconnected(uint16_t hci_handle, tHCI_REASON reason) {
   BTM_LogHistory(kBtmLogTag, bd_addr, "Disconnected",
                  base::StringPrintf("handle:0x%04x reason:%s", hci_handle,
                                     hci_reason_code_text(reason).c_str()));
+
+  bluetooth::audio::sco::cleanup();
 }
 
 /*******************************************************************************
@@ -1120,8 +1148,7 @@ static tBTM_STATUS BTM_ChangeEScoLinkParms(uint16_t sco_inx,
     if (controller_get_interface()
             ->supports_enhanced_setup_synchronous_connection()) {
       /* Use the saved SCO routing */
-      p_setup->input_data_path = p_setup->output_data_path =
-          btm_cb.sco_cb.sco_route;
+      p_setup->input_data_path = p_setup->output_data_path = ESCO_DATA_PATH;
 
       btsnd_hcic_enhanced_set_up_synchronous_connection(p_sco->hci_handle,
                                                         p_setup);
