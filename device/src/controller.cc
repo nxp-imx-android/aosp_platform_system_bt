@@ -22,27 +22,21 @@
 
 #include <base/logging.h>
 
-#include "bt_types.h"
 #include "btcore/include/event_mask.h"
 #include "btcore/include/module.h"
 #include "btcore/include/version.h"
 #include "check.h"
-#include "hcimsgs.h"
+#include "hci/include/hci_packet_factory.h"
+#include "hci/include/hci_packet_parser.h"
 #include "main/shim/controller.h"
+#include "main/shim/hci_layer.h"
 #include "main/shim/shim.h"
 #include "osi/include/future.h"
 #include "osi/include/properties.h"
 #include "stack/include/btm_ble_api.h"
 
-const bt_event_mask_t BLE_EVENT_MASK = {{0x00, 0x00, 0x00, 0x00, 0x7F, 0x02,
-#if (BLE_PRIVACY_SPT == TRUE)
-                                         0xFE,
-#else
-                                         /* Disable "LE Enhanced Connection
-                                            Complete" when privacy is off */
-                                         0xFC,
-#endif
-                                         0x7f}};
+const bt_event_mask_t BLE_EVENT_MASK = {
+    {0x00, 0x00, 0x00, 0x00, 0x7F, 0x02, 0xFE, 0x7f}};
 
 const bt_event_mask_t CLASSIC_EVENT_MASK = {HCI_DUMO_EVENT_MASK_EXT};
 
@@ -328,7 +322,7 @@ EXPORT_SYMBOL extern const module_t controller_module = {
     .start_up = start_up,
     .shut_down = shut_down,
     .clean_up = NULL,
-    .dependencies = {HCI_MODULE, NULL}};
+    .dependencies = {NULL}};
 
 // Interface functions
 
@@ -827,7 +821,7 @@ static const controller_t* controller_get_interface_legacy() {
   if (!loaded) {
     loaded = true;
 
-    local_hci = hci_layer_get_interface();
+    local_hci = bluetooth::shim::hci_layer_get_interface();
     packet_factory = hci_packet_factory_get_interface();
     packet_parser = hci_packet_parser_get_interface();
   }

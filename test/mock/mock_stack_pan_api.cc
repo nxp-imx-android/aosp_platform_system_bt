@@ -26,16 +26,15 @@ extern std::map<std::string, int> mock_function_count_map;
 
 #include <base/logging.h>
 #include <string.h>
+
 #include "bnep_api.h"
-#include "bt_common.h"
-#include "bt_types.h"
 #include "btm_api.h"
-#include "hcidefs.h"
 #include "l2c_api.h"
 #include "pan_api.h"
 #include "sdp_api.h"
 #include "sdpdefs.h"
 #include "stack/btm/btm_sec.h"
+#include "stack/include/bt_hdr.h"
 #include "stack/pan/pan_int.h"
 
 #ifndef UNUSED_ATTR

@@ -14,15 +14,10 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-import importlib
 import logging
 import os
 import signal
 import subprocess
-import traceback
-
-from functools import wraps
-from grpc import RpcError
 
 from cert.async_subprocess_logger import AsyncSubprocessLogger
 from cert.os_utils import get_gd_root
@@ -30,11 +25,14 @@ from cert.os_utils import read_crash_snippet_and_log_tail
 from cert.os_utils import is_subprocess_alive
 from cert.os_utils import make_ports_available
 from cert.os_utils import TerminalColor
-from cert.gd_device import MOBLY_CONTROLLER_CONFIG_NAME as CONTROLLER_CONFIG_NAME
-from facade import rootservice_pb2 as facade_rootservice
 
 
-def setup_rootcanal(dut_module, cert_module, verbose_mode, log_path_base, controller_configs):
+def setup_rootcanal(dut_module,
+                    cert_module,
+                    verbose_mode,
+                    log_path_base,
+                    controller_configs,
+                    controller_properties_file=''):
     info = {}
     info['dut_module'] = dut_module
     info['cert_module'] = cert_module
@@ -66,10 +64,18 @@ def setup_rootcanal(dut_module, cert_module, verbose_mode, log_path_base, contro
         info['make_rootcanal_ports_available'] = make_ports_available((rootcanal_test_port, rootcanal_hci_port,
                                                                        rootcanal_link_layer_port))
         if not make_ports_available((rootcanal_test_port, rootcanal_hci_port, rootcanal_link_layer_port)):
+            logging.error(
+                "Failed to free ports rootcanal_test_port={}, rootcanal_hci_port={}, rootcanal_link_layer_port={}".
+                format(rootcanal_test_port, rootcanal_hci_port, rootcanal_link_layer_port))
             return info
 
         # Start root canal process
-        rootcanal_cmd = [rootcanal, str(rootcanal_test_port), str(rootcanal_hci_port), str(rootcanal_link_layer_port)]
+        rootcanal_cmd = [
+            rootcanal,
+            str(rootcanal_test_port),
+            str(rootcanal_hci_port),
+            str(rootcanal_link_layer_port), '-controller_properties_file=' + controller_properties_file
+        ]
         info['rootcanal_cmd'] = rootcanal_cmd
 
         rootcanal_process = subprocess.Popen(
@@ -85,10 +91,12 @@ def setup_rootcanal(dut_module, cert_module, verbose_mode, log_path_base, contro
             info['is_rootcanal_process_started'] = True
         else:
             info['is_rootcanal_process_started'] = False
+            logging.error("rootcanal process failed to start")
             return info
         info['is_subprocess_alive'] = is_subprocess_alive(rootcanal_process)
         if not is_subprocess_alive(rootcanal_process):
             info['is_subprocess_alive'] = False
+            logging.error("rootcanal died after running")
             return info
 
         info['rootcanal_logger'] = AsyncSubprocessLogger(
@@ -122,21 +130,6 @@ def teardown_rootcanal(rootcanal_running, rootcanal_process, rootcanal_logger, s
         if return_code != 0 and return_code != -stop_signal:
             logging.error("rootcanal stopped with code: %d" % return_code)
         rootcanal_logger.stop()
-
-
-def setup_test_core(dut, cert, dut_module, cert_module):
-    dut.rootservice.StartStack(
-        facade_rootservice.StartStackRequest(module_under_test=facade_rootservice.BluetoothModule.Value(dut_module),))
-    cert.rootservice.StartStack(
-        facade_rootservice.StartStackRequest(module_under_test=facade_rootservice.BluetoothModule.Value(cert_module),))
-
-    dut.wait_channel_ready()
-    cert.wait_channel_ready()
-
-
-def teardown_test_core(cert, dut):
-    cert.rootservice.StopStack(facade_rootservice.StopStackRequest())
-    dut.rootservice.StopStack(facade_rootservice.StopStackRequest())
 
 
 def dump_crashes_core(dut, cert, rootcanal_running, rootcanal_process, rootcanal_logpath):

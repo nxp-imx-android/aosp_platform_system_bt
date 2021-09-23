@@ -22,19 +22,19 @@
  *
  ******************************************************************************/
 
+#include "hidh_api.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
-#include "bt_common.h"
-#include "bt_types.h"
 #include "btm_api.h"
-#include "btu.h"
 #include "hiddefs.h"
-#include "hidh_api.h"
 #include "hidh_int.h"
+#include "osi/include/allocator.h"
 #include "stack/btm/btm_dev.h"
 #include "stack/btm/btm_sec.h"
+#include "stack/include/bt_hdr.h"
 
 using bluetooth::Uuid;
 

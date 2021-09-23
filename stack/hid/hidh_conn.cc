@@ -25,22 +25,18 @@
 #include <base/strings/stringprintf.h>
 #include <string.h>
 
-#include "bt_common.h"
-#include "bt_types.h"
-
-#include "l2c_api.h"
-#include "l2cdefs.h"
-
+#include "bta/include/bta_api.h"
 #include "hiddefs.h"
-
 #include "hidh_api.h"
 #include "hidh_int.h"
-
-#include "bta/include/bta_api.h"
+#include "l2c_api.h"
+#include "l2cdefs.h"
+#include "osi/include/allocator.h"
 #include "osi/include/log.h"
 #include "osi/include/osi.h"
 #include "stack/btm/btm_sec.h"
 #include "stack/include/acl_api.h"
+#include "stack/include/bt_hdr.h"
 #include "stack/include/btm_api.h"  // BTM_LogHistory
 
 namespace {
@@ -314,13 +310,11 @@ static void hidh_on_l2cap_error(uint16_t l2cap_cid, uint16_t result) {
 static void hidh_l2cif_connect_cfm(uint16_t l2cap_cid, uint16_t result) {
   uint8_t dhandle;
   tHID_CONN* p_hcon = NULL;
-  tHID_HOST_DEV_CTB* p_dev = NULL;
 
   /* Find CCB based on CID, and verify we are in a state to accept this message
    */
   dhandle = find_conn_by_cid(l2cap_cid);
   if (dhandle < kHID_HOST_MAX_DEVICES) {
-    p_dev = &hh_cb.devices[dhandle];
     p_hcon = &hh_cb.devices[dhandle].conn;
   }
 

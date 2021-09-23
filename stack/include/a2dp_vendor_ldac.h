@@ -21,9 +21,12 @@
 #ifndef A2DP_VENDOR_LDAC_H
 #define A2DP_VENDOR_LDAC_H
 
+#include <bt_target.h>
+
 #include "a2dp_codec_api.h"
 #include "a2dp_vendor_ldac_constants.h"
 #include "avdt_api.h"
+#include "stack/include/bt_hdr.h"
 
 class A2dpCodecConfigLdacBase : public A2dpCodecConfig {
  protected:
@@ -48,15 +51,9 @@ class A2dpCodecConfigLdacSource : public A2dpCodecConfigLdacBase {
   virtual ~A2dpCodecConfigLdacSource();
 
   bool init() override;
-  uint64_t encoderIntervalMs() const override;
-  int getEffectiveMtu() const override;
 
  private:
   bool useRtpHeaderMarkerBit() const override;
-  bool updateEncoderUserConfig(
-      const tA2DP_ENCODER_INIT_PEER_PARAMS* p_peer_params,
-      bool* p_restart_input, bool* p_restart_output,
-      bool* p_config_updated) override;
   void debug_codec_dump(int fd) override;
 };
 
@@ -66,15 +63,9 @@ class A2dpCodecConfigLdacSink : public A2dpCodecConfigLdacBase {
   virtual ~A2dpCodecConfigLdacSink();
 
   bool init() override;
-  uint64_t encoderIntervalMs() const override;
-  int getEffectiveMtu() const override;
 
  private:
   bool useRtpHeaderMarkerBit() const override;
-  bool updateEncoderUserConfig(
-      const tA2DP_ENCODER_INIT_PEER_PARAMS* p_peer_params,
-      bool* p_restart_input, bool* p_restart_output,
-      bool* p_config_updated) override;
 };
 
 // Checks whether the codec capabilities contain a valid A2DP LDAC Source

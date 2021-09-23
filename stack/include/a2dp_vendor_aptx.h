@@ -21,9 +21,12 @@
 #ifndef A2DP_VENDOR_APTX_H
 #define A2DP_VENDOR_APTX_H
 
+#include <bt_target.h>
+
 #include "a2dp_codec_api.h"
 #include "a2dp_vendor_aptx_constants.h"
 #include "avdt_api.h"
+#include "stack/include/bt_hdr.h"
 
 class A2dpCodecConfigAptx : public A2dpCodecConfig {
  public:
@@ -31,8 +34,6 @@ class A2dpCodecConfigAptx : public A2dpCodecConfig {
   virtual ~A2dpCodecConfigAptx();
 
   bool init() override;
-  uint64_t encoderIntervalMs() const override;
-  int getEffectiveMtu() const override;
   bool setCodecConfig(const uint8_t* p_peer_codec_info, bool is_capability,
                       uint8_t* p_result_codec_config) override;
   bool setPeerCodecCapabilities(
@@ -40,10 +41,6 @@ class A2dpCodecConfigAptx : public A2dpCodecConfig {
 
  private:
   bool useRtpHeaderMarkerBit() const override;
-  bool updateEncoderUserConfig(
-      const tA2DP_ENCODER_INIT_PEER_PARAMS* p_peer_params,
-      bool* p_restart_input, bool* p_restart_output,
-      bool* p_config_updated) override;
   void debug_codec_dump(int fd) override;
 };
 

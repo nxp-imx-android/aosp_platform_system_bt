@@ -29,7 +29,9 @@
 #include "bt_target.h"
 #include "l2c_api.h"
 #include "l2cdefs.h"
+#include "osi/include/allocator.h"
 #include "osi/include/osi.h"
+#include "stack/include/bt_hdr.h"
 
 /* callback function declarations */
 void avct_l2c_br_connect_ind_cback(const RawAddress& bd_addr, uint16_t lcid,

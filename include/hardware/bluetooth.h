@@ -53,6 +53,7 @@
 #define BT_KEYSTORE_ID "bluetooth_keystore"
 #define BT_ACTIVITY_ATTRIBUTION_ID "activity_attribution"
 #define BT_PROFILE_VC_ID "volume_control"
+#define BT_PROFILE_CSIS_CLIENT_ID "csis_client"
 
 /** Bluetooth Device Name */
 typedef struct { uint8_t name[249]; } __attribute__((packed)) bt_bdname_t;
@@ -203,6 +204,8 @@ typedef struct {
   bool le_periodic_advertising_supported;
   uint16_t le_maximum_advertising_data_length;
   uint32_t dynamic_audio_buffer_supported;
+  bool le_periodic_advertising_sync_transfer_sender_supported;
+  bool le_connected_isochronous_stream_central_supported;
 } bt_local_le_features_t;
 
 /* Stored the default/maximum/minimum buffer time for dynamic audio buffer.
@@ -324,6 +327,13 @@ typedef enum {
 
   BT_PROPERTY_DYNAMIC_AUDIO_BUFFER,
 
+  /**
+   * Description - True if Remote is a Member of a Coordinated Set.
+   * Access mode - GET.
+   * Data Type - bool.
+   */
+  BT_PROPERTY_REMOTE_IS_COORDINATED_SET_MEMBER,
+
   BT_PROPERTY_REMOTE_DEVICE_TIMESTAMP = 0xFF,
 } bt_property_type_t;
 
@@ -434,12 +444,14 @@ typedef void (*ssp_request_callback)(RawAddress* remote_bd_addr,
 /* Invoked in response to create_bond, cancel_bond or remove_bond */
 typedef void (*bond_state_changed_callback)(bt_status_t status,
                                             RawAddress* remote_bd_addr,
-                                            bt_bond_state_t state);
+                                            bt_bond_state_t state,
+                                            int fail_reason);
 
 /** Bluetooth ACL connection state changed callback */
 typedef void (*acl_state_changed_callback)(bt_status_t status,
                                            RawAddress* remote_bd_addr,
                                            bt_acl_state_t state,
+                                           int transport_link_type,
                                            bt_hci_error_code_t hci_reason);
 
 /** Bluetooth link quality report callback */

@@ -706,8 +706,7 @@ void smp_process_pairing_public_key(tSMP_CB* p_cb, tSMP_INT_DATA* p_data) {
   memcpy(pt.x, p_cb->peer_publ_key.x, BT_OCTET32_LEN);
   memcpy(pt.y, p_cb->peer_publ_key.y, BT_OCTET32_LEN);
 
-  if (!memcmp(p_cb->peer_publ_key.x, p_cb->loc_publ_key.x, BT_OCTET32_LEN) &&
-      !memcmp(p_cb->peer_publ_key.y, p_cb->loc_publ_key.y, BT_OCTET32_LEN)) {
+  if (!memcmp(p_cb->peer_publ_key.x, p_cb->loc_publ_key.x, BT_OCTET32_LEN)) {
     android_errorWriteLog(0x534e4554, "174886838");
     SMP_TRACE_WARNING("Remote and local public keys can't match");
     tSMP_INT_DATA smp;
@@ -910,6 +909,15 @@ void smp_br_check_authorization_request(tSMP_CB* p_cb, tSMP_INT_DATA* p_data) {
     p_cb->key_derivation_h7_used = TRUE;
   }
   SMP_TRACE_DEBUG("%s: use h7 = %d", __func__, p_cb->key_derivation_h7_used);
+
+  /* SMP over BR/EDR should always be used with CTKD, so derive LTK from
+   * LK before receiving keys */
+  if ((p_cb->role == HCI_ROLE_CENTRAL &&
+       (p_cb->local_i_key & SMP_SEC_KEY_TYPE_ENC)) ||
+      (p_cb->role == HCI_ROLE_PERIPHERAL &&
+       (p_cb->local_r_key & SMP_SEC_KEY_TYPE_ENC))) {
+    smp_generate_ltk(p_cb, p_data);
+  }
 
   SMP_TRACE_DEBUG(
       "%s rcvs upgrades: i_keys=0x%x r_keys=0x%x (i-initiator r-responder)",

@@ -43,10 +43,11 @@
 
 #include <bluetooth/uuid.h>
 #include <hardware/bluetooth.h>
+#include <hardware/bt_csis.h>
 #include <hardware/bt_hearing_aid.h>
 
 #include "advertise_data_parser.h"
-#include "bt_common.h"
+#include "bta_csis_api.h"
 #include "bta_dm_int.h"
 #include "bta_gatt_api.h"
 #include "btif/include/stack_manager.h"
@@ -63,7 +64,6 @@
 #include "btif_sdp.h"
 #include "btif_storage.h"
 #include "btif_util.h"
-#include "btu.h"
 #include "common/metrics.h"
 #include "device/include/controller.h"
 #include "device/include/interop.h"
@@ -84,6 +84,7 @@ using bluetooth::Uuid;
 
 const Uuid UUID_HEARING_AID = Uuid::FromString("FDF0");
 const Uuid UUID_VC = Uuid::FromString("1844");
+const Uuid UUID_CSIS = Uuid::FromString("1846");
 
 #define COD_MASK 0x07FF
 
@@ -129,6 +130,7 @@ typedef struct {
   bool is_le_only;
   bool is_le_nc; /* LE Numeric comparison */
   btif_dm_ble_cb_t ble;
+  uint8_t fail_reason;
 } btif_dm_pairing_cb_t;
 
 // TODO(jpawlowski): unify ?
@@ -240,6 +242,7 @@ extern bt_status_t btif_hh_connect(const RawAddress* bd_addr);
 extern bt_status_t btif_hd_execute_service(bool b_enable);
 extern bluetooth::hearing_aid::HearingAidInterface*
 btif_hearing_aid_get_interface();
+extern bluetooth::csis::CsisClientInterface* btif_csis_client_get_interface();
 
 /******************************************************************************
  *  Functions
@@ -444,7 +447,8 @@ static void bond_state_changed(bt_status_t status, const RawAddress& bd_addr,
   if ((pairing_cb.state == state) && (state == BT_BOND_STATE_BONDING)) {
     // Cross key pairing so send callback for static address
     if (!pairing_cb.static_bdaddr.IsEmpty()) {
-      invoke_bond_state_changed_cb(status, bd_addr, state);
+      invoke_bond_state_changed_cb(status, bd_addr, state,
+                                   pairing_cb.fail_reason);
     }
     return;
   }
@@ -467,7 +471,7 @@ static void bond_state_changed(bt_status_t status, const RawAddress& bd_addr,
                  << bd_addr;
     }
   }
-  invoke_bond_state_changed_cb(status, bd_addr, state);
+  invoke_bond_state_changed_cb(status, bd_addr, state, pairing_cb.fail_reason);
 
   int dev_type;
   if (!btif_get_device_type(bd_addr, &dev_type)) {
@@ -920,6 +924,8 @@ static void btif_dm_auth_cmpl_evt(tBTA_DM_AUTH_CMPL* p_auth_cmpl) {
                    pairing_cb.state, p_auth_cmpl->success,
                    p_auth_cmpl->key_present);
 
+  pairing_cb.fail_reason = p_auth_cmpl->fail_reason;
+
   RawAddress bd_addr = p_auth_cmpl->bd_addr;
   if (!bluetooth::shim::is_gd_security_enabled()) {
     if ((p_auth_cmpl->success) && (p_auth_cmpl->key_present)) {
@@ -1174,7 +1180,7 @@ static void btif_dm_search_devices_evt(tBTA_DM_SEARCH_EVT event,
       }
 
       {
-        bt_property_t properties[5];
+        bt_property_t properties[6];
         bt_device_type_t dev_type;
         uint32_t num_properties = 0;
         bt_status_t status;
@@ -1231,6 +1237,13 @@ static void btif_dm_search_devices_evt(tBTA_DM_SEARCH_EVT event,
                                    &(p_search_data->inq_res.rssi));
         num_properties++;
 
+        /* CSIP supported device */
+        BTIF_STORAGE_FILL_PROPERTY(&properties[num_properties],
+                                   BT_PROPERTY_REMOTE_IS_COORDINATED_SET_MEMBER,
+                                   sizeof(bool),
+                                   &(p_search_data->inq_res.include_rsi));
+        num_properties++;
+
         status =
             btif_storage_add_remote_device(&bdaddr, num_properties, properties);
         ASSERTC(status == BT_STATUS_SUCCESS,
@@ -1278,7 +1291,7 @@ static void btif_dm_search_devices_evt(tBTA_DM_SEARCH_EVT event,
 /* Returns true if |uuid| should be passed as device property */
 static bool btif_is_interesting_le_service(bluetooth::Uuid uuid) {
   return (uuid.As16Bit() == UUID_SERVCLASS_LE_HID || uuid == UUID_HEARING_AID ||
-          uuid == UUID_VC);
+          uuid == UUID_VC || uuid == UUID_CSIS);
 }
 
 /*******************************************************************************
@@ -1563,6 +1576,10 @@ static void btif_dm_upstreams_evt(uint16_t event, char* p_param) {
       btif_hd_remove_device(bd_addr);
 #endif
       btif_hearing_aid_get_interface()->RemoveDevice(bd_addr);
+
+      if (bluetooth::csis::CsisClient::IsCsisClientRunning())
+        btif_csis_client_get_interface()->RemoveDevice(bd_addr);
+
       btif_storage_remove_bonded_device(&bd_addr);
       bond_state_changed(BT_STATUS_SUCCESS, bd_addr, BT_BOND_STATE_NONE);
       break;
@@ -1573,8 +1590,9 @@ static void btif_dm_upstreams_evt(uint16_t event, char* p_param) {
 
       btif_update_remote_version_property(&bd_addr);
 
-      invoke_acl_state_changed_cb(BT_STATUS_SUCCESS, bd_addr,
-                                  BT_ACL_STATE_CONNECTED, HCI_SUCCESS);
+      invoke_acl_state_changed_cb(
+          BT_STATUS_SUCCESS, bd_addr, BT_ACL_STATE_CONNECTED,
+          (int)p_data->link_up.transport_link_type, HCI_SUCCESS);
       break;
 
     case BTA_DM_LINK_DOWN_EVT:
@@ -1582,9 +1600,10 @@ static void btif_dm_upstreams_evt(uint16_t event, char* p_param) {
       btm_set_bond_type_dev(p_data->link_down.bd_addr,
                             tBTM_SEC_DEV_REC::BOND_TYPE_UNKNOWN);
       btif_av_acl_disconnected(bd_addr);
-      invoke_acl_state_changed_cb(BT_STATUS_SUCCESS, bd_addr,
-                                  BT_ACL_STATE_DISCONNECTED,
-                                  static_cast<bt_hci_error_code_t>(btm_get_acl_disc_reason_code()));
+      invoke_acl_state_changed_cb(
+          BT_STATUS_SUCCESS, bd_addr, BT_ACL_STATE_DISCONNECTED,
+          (int)p_data->link_down.transport_link_type,
+          static_cast<bt_hci_error_code_t>(btm_get_acl_disc_reason_code()));
       LOG_DEBUG(
           "Sent BT_ACL_STATE_DISCONNECTED upward as ACL link down event "
           "device:%s reason:%s",
@@ -1765,6 +1784,10 @@ static void btif_dm_upstreams_evt(uint16_t event, char* p_param) {
       local_le_features.dynamic_audio_buffer_supported =
           cmn_vsc_cb.dynamic_audio_buffer_support;
 
+      local_le_features.le_periodic_advertising_sync_transfer_sender_supported =
+          controller->supports_ble_periodic_advertising_sync_transfer_sender();
+      local_le_features.le_connected_isochronous_stream_central_supported =
+          controller->supports_ble_connected_isochronous_stream_central();
       invoke_adapter_properties_cb(BT_STATUS_SUCCESS, 1, &prop);
       break;
     }

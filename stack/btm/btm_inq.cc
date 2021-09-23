@@ -32,25 +32,21 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "advertise_data_parser.h"
 #include "common/time_util.h"
 #include "device/include/controller.h"
-#include "osi/include/log.h"
-#include "osi/include/osi.h"
-
-#include "advertise_data_parser.h"
-#include "bt_common.h"
-#include "bt_types.h"
-#include "hcidefs.h"
 #include "main/shim/btm_api.h"
 #include "main/shim/shim.h"
+#include "osi/include/allocator.h"
+#include "osi/include/log.h"
+#include "osi/include/osi.h"
 #include "stack/btm/btm_ble_int.h"
 #include "stack/btm/btm_int.h"
 #include "stack/btm/btm_int_types.h"
 #include "stack/include/acl_api.h"
+#include "stack/include/bt_hdr.h"
 #include "stack/include/btm_api.h"
 #include "stack/include/btm_ble_api.h"
-#include "stack/include/btu.h"
-#include "stack/include/hcimsgs.h"
 #include "stack/include/inq_hci_link_interface.h"
 
 extern tBTM_CB btm_cb;

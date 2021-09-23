@@ -39,6 +39,8 @@
 #include "main/shim/btm_api.h"
 #include "main/shim/dumpsys.h"
 #include "main/shim/shim.h"
+#include "osi/include/allocator.h"
+#include "osi/include/compat.h"
 #include "osi/include/fixed_queue.h"
 #include "osi/include/log.h"
 #include "osi/include/osi.h"
@@ -46,6 +48,7 @@
 #include "stack/btm/neighbor_inquiry.h"
 #include "stack/gatt/connection_manager.h"
 #include "stack/include/acl_api.h"
+#include "stack/include/bt_hdr.h"
 #include "stack/include/bt_types.h"
 #include "stack/include/btm_client_interface.h"
 #include "stack/include/btu.h"  // do_in_main_thread
@@ -1828,6 +1831,7 @@ static void bta_dm_inq_results_cb(tBTM_INQ_RESULTS* p_inq, uint8_t* p_eir,
   result.inq_res.inq_result_type = p_inq->inq_result_type;
   result.inq_res.device_type = p_inq->device_type;
   result.inq_res.flag = p_inq->flag;
+  result.inq_res.include_rsi = p_inq->include_rsi;
 
   /* application will parse EIR to find out remote device name */
   result.inq_res.p_eir = p_eir;
@@ -2435,6 +2439,7 @@ void bta_dm_acl_up(const RawAddress& bd_addr, tBT_TRANSPORT transport) {
     tBTA_DM_SEC conn;
     memset(&conn, 0, sizeof(tBTA_DM_SEC));
     conn.link_up.bd_addr = bd_addr;
+    conn.link_up.transport_link_type = transport;
 
     bta_dm_cb.p_sec_cback(BTA_DM_LINK_UP_EVT, &conn);
     LOG_DEBUG("Executed security callback for new connection available");
@@ -2521,6 +2526,7 @@ static void bta_dm_acl_down(const RawAddress& bd_addr,
     tBTA_DM_SEC conn;
     memset(&conn, 0, sizeof(tBTA_DM_SEC));
     conn.link_down.bd_addr = bd_addr;
+    conn.link_down.transport_link_type = transport;
 
     bta_dm_cb.p_sec_cback(BTA_DM_LINK_DOWN_EVT, &conn);
     if (issue_unpair_cb) bta_dm_cb.p_sec_cback(BTA_DM_DEV_UNPAIRED_EVT, &conn);
@@ -3736,12 +3742,10 @@ void bta_dm_ble_update_conn_params(const RawAddress& bd_addr, uint16_t min_int,
   }
 }
 
-#if (BLE_PRIVACY_SPT == TRUE)
 /** This function set the local device LE privacy settings. */
 void bta_dm_ble_config_local_privacy(bool privacy_enable) {
   BTM_BleConfigPrivacy(privacy_enable);
 }
-#endif
 
 static void bta_dm_start_scan(uint8_t duration_sec) {
   tBTM_STATUS status = BTM_BleObserve(

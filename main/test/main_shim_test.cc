@@ -16,6 +16,7 @@
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
+
 #include <condition_variable>
 #include <future>
 #include <map>
@@ -41,7 +42,6 @@
 #include "hci/include/hci_layer.h"
 #include "hci/include/hci_packet_factory.h"
 #include "hci/include/hci_packet_parser.h"
-#include "hci/include/packet_fragmenter.h"
 #include "include/hardware/bt_activity_attribution.h"
 #include "main/shim/acl.h"
 #include "main/shim/acl_legacy_interface.h"
@@ -49,7 +49,7 @@
 #include "os/handler.h"
 #include "os/thread.h"
 #include "stack/btm/btm_int_types.h"
-#include "stack/include/btu.h"
+#include "stack/include/bt_hdr.h"
 #include "stack/l2cap/l2c_int.h"
 #include "test/common/main_handler.h"
 #include "test/mock/mock_main_shim_entry.h"

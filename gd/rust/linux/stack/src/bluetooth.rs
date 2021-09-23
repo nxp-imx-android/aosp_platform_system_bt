@@ -1,21 +1,22 @@
 //! Anything related to the adapter API (IBluetooth).
 
 use bt_topshim::btif::{
-    BaseCallbacks, BaseCallbacksDispatcher, BluetoothInterface, BtBondState, BtDiscoveryState,
-    BtProperty, BtPropertyType, BtSspVariant, BtState, BtStatus, BtTransport, RawAddress,
+    BaseCallbacks, BaseCallbacksDispatcher, BluetoothInterface, BluetoothProperty, BtBondState,
+    BtDiscoveryState, BtPropertyType, BtSspVariant, BtState, BtStatus, BtTransport, RawAddress,
 };
 use bt_topshim::profiles::hid_host::{HHCallbacksDispatcher, HidHost};
 use bt_topshim::topstack;
 
 use btif_macros::{btif_callback, btif_callbacks_dispatcher};
 
+use log::{debug, warn};
 use num_traits::cast::ToPrimitive;
-
+use std::collections::HashMap;
 use std::sync::Arc;
 use std::sync::Mutex;
-
 use tokio::sync::mpsc::Sender;
 
+use crate::bluetooth_media::{BluetoothMedia, IBluetoothMedia};
 use crate::{Message, RPCProxy};
 
 /// Defines the adapter API.
@@ -44,6 +45,18 @@ pub trait IBluetooth {
 
     /// Initiates pairing to a remote device. Triggers connection if not already started.
     fn create_bond(&self, device: BluetoothDevice, transport: BluetoothTransport) -> bool;
+
+    /// Cancels any pending bond attempt on given device.
+    fn cancel_bond_process(&self, device: BluetoothDevice) -> bool;
+
+    /// Removes pairing for given device.
+    fn remove_bond(&self, device: BluetoothDevice) -> bool;
+
+    /// Returns a list of known bonded devices.
+    fn get_bonded_devices(&self) -> Vec<BluetoothDevice>;
+
+    /// Gets the bond state of a single device.
+    fn get_bond_state(&self, device: BluetoothDevice) -> u32;
 }
 
 #[derive(Debug, FromPrimitive, ToPrimitive)]
@@ -54,32 +67,71 @@ pub enum BluetoothTransport {
     Le = 2,
 }
 
-#[derive(Debug, Default)]
+/// Serializable device used in various apis.
+#[derive(Clone, Debug, Default)]
 pub struct BluetoothDevice {
     pub address: String,
     pub name: String,
 }
 
 impl BluetoothDevice {
-    pub(crate) fn from_properties(properties: &Vec<BtProperty>) -> BluetoothDevice {
+    pub(crate) fn new(address: String, name: String) -> BluetoothDevice {
+        BluetoothDevice { address, name }
+    }
+
+    pub(crate) fn from_properties(in_properties: &Vec<BluetoothProperty>) -> BluetoothDevice {
         let mut address = String::from("");
         let mut name = String::from("");
 
-        for prop in properties {
-            match prop.prop_type {
-                BtPropertyType::BdAddr => {
-                    if let Some(addr) = RawAddress::from_bytes(&prop.val) {
-                        address = addr.to_string();
-                    }
+        for prop in in_properties {
+            match &prop {
+                BluetoothProperty::BdAddr(bdaddr) => {
+                    address = bdaddr.to_string();
                 }
-                BtPropertyType::BdName => {
-                    name = String::from_utf8(prop.val.clone()).unwrap();
+                BluetoothProperty::BdName(bdname) => {
+                    name = bdname.clone();
                 }
                 _ => {}
             }
         }
 
-        BluetoothDevice { address, name }
+        BluetoothDevice::new(address, name)
+    }
+}
+
+/// Internal data structure that keeps a map of cached properties for a remote device.
+struct BluetoothDeviceContext {
+    pub bond_state: BtBondState,
+    pub info: BluetoothDevice,
+    pub properties: HashMap<BtPropertyType, BluetoothProperty>,
+}
+
+impl BluetoothDeviceContext {
+    pub(crate) fn new(
+        bond_state: BtBondState,
+        info: BluetoothDevice,
+        properties: Vec<BluetoothProperty>,
+    ) -> BluetoothDeviceContext {
+        let bond_state = BtBondState::NotBonded;
+        let mut device = BluetoothDeviceContext { bond_state, info, properties: HashMap::new() };
+        device.update_properties(properties);
+        device
+    }
+
+    pub(crate) fn update_properties(&mut self, in_properties: Vec<BluetoothProperty>) {
+        for prop in in_properties {
+            match &prop {
+                BluetoothProperty::BdAddr(bdaddr) => {
+                    self.info.address = bdaddr.to_string();
+                }
+                BluetoothProperty::BdName(bdname) => {
+                    self.info.name = bdname.clone();
+                }
+                _ => {}
+            }
+
+            self.properties.insert(prop.get_type(), prop);
+        }
     }
 }
 
@@ -102,30 +154,46 @@ pub trait IBluetoothCallback: RPCProxy {
         variant: BtSspVariant,
         passkey: u32,
     );
+
+    /// When a bonding attempt has completed.
+    fn on_bond_state_changed(&self, status: u32, device_address: String, state: u32);
 }
 
 /// Implementation of the adapter API.
 pub struct Bluetooth {
     intf: Arc<Mutex<BluetoothInterface>>,
-    state: BtState,
+
+    bonded_devices: HashMap<String, BluetoothDeviceContext>,
+    bluetooth_media: Arc<Mutex<Box<BluetoothMedia>>>,
     callbacks: Vec<(u32, Box<dyn IBluetoothCallback + Send>)>,
     callbacks_last_id: u32,
-    tx: Sender<Message>,
-    local_address: Option<RawAddress>,
     hh: Option<HidHost>,
+    local_address: Option<RawAddress>,
+    properties: HashMap<BtPropertyType, BluetoothProperty>,
+    found_devices: HashMap<String, BluetoothDeviceContext>,
+    state: BtState,
+    tx: Sender<Message>,
 }
 
 impl Bluetooth {
     /// Constructs the IBluetooth implementation.
-    pub fn new(tx: Sender<Message>, intf: Arc<Mutex<BluetoothInterface>>) -> Bluetooth {
+    pub fn new(
+        tx: Sender<Message>,
+        intf: Arc<Mutex<BluetoothInterface>>,
+        bluetooth_media: Arc<Mutex<Box<BluetoothMedia>>>,
+    ) -> Bluetooth {
         Bluetooth {
-            tx,
-            intf,
-            state: BtState::Off,
+            bonded_devices: HashMap::new(),
             callbacks: vec![],
             callbacks_last_id: 0,
-            local_address: None,
             hh: None,
+            bluetooth_media,
+            intf,
+            local_address: None,
+            properties: HashMap::new(),
+            found_devices: HashMap::new(),
+            state: BtState::Off,
+            tx,
         }
     }
 
@@ -134,13 +202,13 @@ impl Bluetooth {
         self.hh.as_mut().unwrap().initialize(HHCallbacksDispatcher {
             dispatch: Box::new(move |_cb| {
                 // TODO("Implement the callbacks");
-                println!("received HH callback");
+                debug!("received HH callback");
             }),
         });
     }
 
-    fn update_local_address(&mut self, raw: &Vec<u8>) {
-        self.local_address = RawAddress::from_bytes(raw);
+    fn update_local_address(&mut self, addr: &RawAddress) {
+        self.local_address = Some(*addr);
 
         self.for_all_callbacks(|callback| {
             callback.on_address_changed(self.local_address.unwrap().to_string());
@@ -168,11 +236,11 @@ pub(crate) trait BtifBluetoothCallbacks {
         &mut self,
         status: BtStatus,
         num_properties: i32,
-        properties: Vec<BtProperty>,
+        properties: Vec<BluetoothProperty>,
     );
 
     #[btif_callback(DeviceFound)]
-    fn device_found(&mut self, n: i32, properties: Vec<BtProperty>);
+    fn device_found(&mut self, n: i32, properties: Vec<BluetoothProperty>);
 
     #[btif_callback(DiscoveryState)]
     fn discovery_state(&mut self, state: BtDiscoveryState);
@@ -188,7 +256,13 @@ pub(crate) trait BtifBluetoothCallbacks {
     );
 
     #[btif_callback(BondState)]
-    fn bond_state(&mut self, status: BtStatus, addr: RawAddress, bond_state: BtBondState);
+    fn bond_state(
+        &mut self,
+        status: BtStatus,
+        addr: RawAddress,
+        bond_state: BtBondState,
+        fail_reason: i32,
+    );
 }
 
 pub fn get_bt_dispatcher(tx: Sender<Message>) -> BaseCallbacksDispatcher {
@@ -204,7 +278,24 @@ pub fn get_bt_dispatcher(tx: Sender<Message>) -> BaseCallbacksDispatcher {
 
 impl BtifBluetoothCallbacks for Bluetooth {
     fn adapter_state_changed(&mut self, state: BtState) {
+        let prev_state = self.state.clone();
         self.state = state;
+
+        // If it's the same state as before, no further action
+        if self.state == prev_state {
+            return;
+        }
+
+        if self.state == BtState::On {
+            self.bluetooth_media.lock().unwrap().initialize();
+        }
+
+        if self.state == BtState::Off {
+            self.properties.clear();
+        } else {
+            // Trigger properties update
+            self.intf.lock().unwrap().get_adapter_properties();
+        }
     }
 
     #[allow(unused_variables)]
@@ -212,29 +303,66 @@ impl BtifBluetoothCallbacks for Bluetooth {
         &mut self,
         status: BtStatus,
         num_properties: i32,
-        properties: Vec<BtProperty>,
+        properties: Vec<BluetoothProperty>,
     ) {
         if status != BtStatus::Success {
             return;
         }
 
+        // Update local property cache
         for prop in properties {
-            match prop.prop_type {
-                BtPropertyType::BdAddr => {
-                    self.update_local_address(&prop.val);
+            match &prop {
+                BluetoothProperty::BdAddr(bdaddr) => {
+                    self.update_local_address(&bdaddr);
+                }
+                BluetoothProperty::AdapterBondedDevices(bondlist) => {
+                    for addr in bondlist.iter() {
+                        let address = addr.to_string();
+
+                        // Update bonded state if already in the list. Otherwise create a new
+                        // context with empty properties and name.
+                        self.bonded_devices
+                            .entry(address.clone())
+                            .and_modify(|d| d.bond_state = BtBondState::Bonded)
+                            .or_insert(BluetoothDeviceContext::new(
+                                BtBondState::Bonded,
+                                BluetoothDevice::new(address.clone(), "".to_string()),
+                                vec![],
+                            ));
+                    }
                 }
                 _ => {}
             }
+
+            self.properties.insert(prop.get_type(), prop);
         }
     }
 
-    fn device_found(&mut self, _n: i32, properties: Vec<BtProperty>) {
+    fn device_found(&mut self, _n: i32, properties: Vec<BluetoothProperty>) {
+        let device = BluetoothDevice::from_properties(&properties);
+        let address = device.address.clone();
+
+        if let Some(existing) = self.found_devices.get_mut(&address) {
+            existing.update_properties(properties);
+        } else {
+            let device_with_props =
+                BluetoothDeviceContext::new(BtBondState::NotBonded, device, properties);
+            self.found_devices.insert(address.clone(), device_with_props);
+        }
+
+        let device = self.found_devices.get(&address).unwrap();
+
         self.for_all_callbacks(|callback| {
-            callback.on_device_found(BluetoothDevice::from_properties(&properties));
+            callback.on_device_found(device.info.clone());
         });
     }
 
     fn discovery_state(&mut self, state: BtDiscoveryState) {
+        // Clear found devices when discovery session ends
+        if &state == &BtDiscoveryState::Stopped {
+            self.found_devices.clear();
+        }
+
         self.for_all_callbacks(|callback| {
             callback.on_discovering_changed(state == BtDiscoveryState::Started);
         });
@@ -252,7 +380,7 @@ impl BtifBluetoothCallbacks for Bluetooth {
         // TODO: We need a way to select the default agent.
         self.for_all_callbacks(|callback| {
             callback.on_ssp_request(
-                BluetoothDevice { address: remote_addr.to_string(), name: remote_name.clone() },
+                BluetoothDevice::new(remote_addr.to_string(), remote_name.clone()),
                 cod,
                 variant.clone(),
                 passkey,
@@ -263,12 +391,57 @@ impl BtifBluetoothCallbacks for Bluetooth {
         self.intf.lock().unwrap().ssp_reply(&remote_addr, variant, 1, passkey);
     }
 
-    fn bond_state(&mut self, _status: BtStatus, mut addr: RawAddress, bond_state: BtBondState) {
-        if bond_state == BtBondState::Bonded {
+    fn bond_state(
+        &mut self,
+        status: BtStatus,
+        mut addr: RawAddress,
+        bond_state: BtBondState,
+        _fail_reason: i32,
+    ) {
+        if &bond_state == &BtBondState::Bonded {
             // We are assuming that peer is a HID device and automatically connect to that profile.
             // TODO: Only connect to enabled profiles on that device.
             self.hh.as_ref().unwrap().connect(&mut addr);
         }
+
+        let address = addr.to_string();
+
+        // Easy case of not bonded -- we remove the device from the bonded list
+        if &bond_state == &BtBondState::NotBonded {
+            self.bonded_devices.remove(&address);
+        }
+        // We will only insert into the bonded list after bonding is complete
+        else if &bond_state == &BtBondState::Bonded && !self.bonded_devices.contains_key(&address)
+        {
+            // We either need to construct a new BluetoothDeviceContext or grab it from the found
+            // devices map
+            let device = match self.found_devices.remove(&address) {
+                Some(mut v) => {
+                    v.bond_state = bond_state.clone();
+                    v
+                }
+                None => BluetoothDeviceContext::new(
+                    bond_state.clone(),
+                    BluetoothDevice::new(address.clone(), "".to_string()),
+                    vec![],
+                ),
+            };
+
+            self.bonded_devices.insert(address.clone(), device);
+        } else {
+            self.bonded_devices
+                .entry(address.clone())
+                .and_modify(|d| d.bond_state = bond_state.clone());
+        }
+
+        // Send bond state changed notifications
+        self.for_all_callbacks(|callback| {
+            callback.on_bond_state_changed(
+                status.to_u32().unwrap(),
+                address.clone(),
+                bond_state.to_u32().unwrap(),
+            );
+        });
     }
 }
 
@@ -318,7 +491,7 @@ impl IBluetooth for Bluetooth {
         let addr = RawAddress::from_string(device.address.clone());
 
         if addr.is_none() {
-            println!("address {} is not valid", device.address);
+            warn!("Can't create bond. Address {} is not valid", device.address);
             return false;
         }
 
@@ -328,5 +501,46 @@ impl IBluetooth for Bluetooth {
             .unwrap()
             .create_bond(&address, BtTransport::from(transport.to_i32().unwrap()))
             == 0
+    }
+
+    fn cancel_bond_process(&self, device: BluetoothDevice) -> bool {
+        let addr = RawAddress::from_string(device.address.clone());
+
+        if addr.is_none() {
+            warn!("Can't cancel bond. Address {} is not valid.", device.address);
+            return false;
+        }
+
+        let address = addr.unwrap();
+        self.intf.lock().unwrap().cancel_bond(&address) == 0
+    }
+
+    fn remove_bond(&self, device: BluetoothDevice) -> bool {
+        let addr = RawAddress::from_string(device.address.clone());
+
+        if addr.is_none() {
+            warn!("Can't remove bond. Address {} is not valid.", device.address);
+            return false;
+        }
+
+        let address = addr.unwrap();
+        self.intf.lock().unwrap().remove_bond(&address) == 0
+    }
+
+    fn get_bonded_devices(&self) -> Vec<BluetoothDevice> {
+        let mut devices: Vec<BluetoothDevice> = vec![];
+
+        for (_, device) in self.bonded_devices.iter() {
+            devices.push(device.info.clone());
+        }
+
+        devices
+    }
+
+    fn get_bond_state(&self, device: BluetoothDevice) -> u32 {
+        match self.bonded_devices.get(&device.address) {
+            Some(device) => device.bond_state.to_u32().unwrap(),
+            None => BtBondState::NotBonded.to_u32().unwrap(),
+        }
     }
 }

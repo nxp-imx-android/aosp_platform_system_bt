@@ -30,8 +30,8 @@
 
 #include "a2dp_int.h"
 #include "avdt_api.h"
-#include "bt_common.h"
 #include "bt_target.h"
+#include "osi/include/allocator.h"
 #include "osi/include/log.h"
 #include "sdpdefs.h"
 

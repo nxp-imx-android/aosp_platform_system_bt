@@ -21,15 +21,17 @@
  *  This file contains security manager protocol utility functions
  *
  ******************************************************************************/
-#include "bt_target.h"
-
 #include <base/bind.h>
-#include <string.h>
+#include <base/callback.h>
+
+#include <algorithm>
+#include <cstring>
+
+#include "bt_target.h"
 #include "bt_utils.h"
 #include "btm_ble_api.h"
 #include "btm_ble_int.h"
 #include "device/include/controller.h"
-#include "hcimsgs.h"
 #include "osi/include/osi.h"
 #include "p_256_ecc_pp.h"
 #include "smp_int.h"
@@ -37,8 +39,6 @@
 #include "stack/btm/btm_sec.h"
 #include "stack/crypto_toolbox/crypto_toolbox.h"
 #include "stack/include/acl_api.h"
-
-#include <algorithm>
 
 extern tBTM_CB btm_cb;  // TODO Remove
 
@@ -531,7 +531,7 @@ static void smp_generate_ltk_cont(uint16_t div, tSMP_CB* p_cb) {
 void smp_generate_ltk(tSMP_CB* p_cb, UNUSED_ATTR tSMP_INT_DATA* p_data) {
   SMP_TRACE_DEBUG("%s", __func__);
 
-  if (smp_get_br_state() == SMP_BR_STATE_BOND_PENDING) {
+  if (p_cb->smp_over_br) {
     smp_br_process_link_key(p_cb, NULL);
     return;
   } else if (p_cb->le_secure_connections_mode_is_used) {

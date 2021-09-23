@@ -28,24 +28,25 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "bt_types.h"
 #include "bta/dm/bta_dm_int.h"
 #include "bta/sys/bta_sys.h"
 #include "btcore/include/module.h"
 #include "btif/include/btif_bqr.h"
 #include "btm_int.h"
-#include "btu.h"
 #include "common/message_loop_thread.h"
 #include "device/include/controller.h"
 #include "hci/include/hci_layer.h"
-#include "hcimsgs.h"
+#include "hci/include/hci_packet_factory.h"
 #include "main/shim/btm_api.h"
 #include "main/shim/controller.h"
+#include "main/shim/hci_layer.h"
 #include "main/shim/shim.h"
+#include "osi/include/compat.h"
 #include "osi/include/osi.h"
 #include "stack/btm/btm_ble_int.h"
 #include "stack/gatt/connection_manager.h"
 #include "stack/include/acl_api.h"
+#include "stack/include/bt_hdr.h"
 #include "stack/include/l2cap_controller_interface.h"
 
 extern tBTM_CB btm_cb;
@@ -662,7 +663,7 @@ tBTM_STATUS BTM_EnableTestMode(void) {
   }
 
   /* mask off all of event from controller */
-  hci_layer_get_interface()->transmit_command(
+  bluetooth::shim::hci_layer_get_interface()->transmit_command(
       hci_packet_factory_get_interface()->make_set_event_mask(
           (const bt_event_mask_t*)("\x00\x00\x00\x00\x00\x00\x00\x00")),
       NULL, NULL, NULL);

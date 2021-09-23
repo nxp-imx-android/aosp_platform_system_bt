@@ -23,6 +23,7 @@
 #include "bta/include/bta_ag_api.h"
 #include "device/include/esco_parameters.h"
 #include "osi/include/allocator.h"
+#include "stack/include/bt_hdr.h"
 #include "stack/include/btm_api.h"
 
 #define BTA_HF_CLIENT_NO_EDR_ESCO                                \
@@ -111,7 +112,7 @@ static void bta_hf_client_sco_conn_rsp(tBTA_HF_CLIENT_CB* client_cb,
     if (p_data->link_type == BTM_LINK_TYPE_SCO) {
       // SCO
       resp = esco_parameters_for_codec(SCO_CODEC_CVSD_D1);
-    } else if (client_cb->negotiated_codec == BTA_AG_CODEC_MSBC) {
+    } else if (client_cb->negotiated_codec == BTM_SCO_CODEC_MSBC) {
       // eSCO mSBC
       resp = esco_parameters_for_codec(ESCO_CODEC_MSBC_T2);
     } else if (bta_hf_client_cb_arr.features & BTA_HF_CLIENT_FEAT_ESCO_S4) {

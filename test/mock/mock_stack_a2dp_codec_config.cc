@@ -26,6 +26,7 @@ extern std::map<std::string, int> mock_function_count_map;
 
 #include <base/logging.h>
 #include <inttypes.h>
+
 #include "a2dp_aac.h"
 #include "a2dp_codec_api.h"
 #include "a2dp_sbc.h"
@@ -33,6 +34,7 @@ extern std::map<std::string, int> mock_function_count_map;
 #include "bta/av/bta_av_int.h"
 #include "osi/include/log.h"
 #include "osi/include/properties.h"
+#include "stack/include/bt_hdr.h"
 
 #ifndef UNUSED_ATTR
 #define UNUSED_ATTR
@@ -96,6 +98,10 @@ bool A2DP_InitCodecConfig(btav_a2dp_codec_index_t codec_index,
                           AvdtpSepConfig* p_cfg) {
   mock_function_count_map[__func__]++;
   return false;
+}
+int A2DP_GetEecoderEffectiveFrameSize(const uint8_t* p_codec_info) {
+  mock_function_count_map[__func__]++;
+  return 0;
 }
 bool A2DP_IsPeerSinkCodecValid(const uint8_t* p_codec_info) {
   mock_function_count_map[__func__]++;

@@ -38,7 +38,6 @@
 #include "btif_common.h"
 #include "btif_util.h"
 
-#include "bt_common.h"
 #include "bta_api.h"
 #include "bta_gatt_api.h"
 #include "btif_config.h"
@@ -46,6 +45,7 @@
 #include "btif_gatt.h"
 #include "btif_gatt_util.h"
 #include "btif_storage.h"
+#include "osi/include/allocator.h"
 #include "osi/include/log.h"
 #include "stack/include/btu.h"
 #include "types/bt_transport.h"

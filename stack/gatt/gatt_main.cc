@@ -23,19 +23,19 @@
  ******************************************************************************/
 
 #include "bt_target.h"
-
-#include "bt_common.h"
 #include "bt_utils.h"
 #include "btif/include/btif_storage.h"
 #include "connection_manager.h"
 #include "device/include/interop.h"
 #include "l2c_api.h"
+#include "osi/include/allocator.h"
 #include "osi/include/osi.h"
 #include "stack/btm/btm_ble_int.h"
 #include "stack/btm/btm_dev.h"
 #include "stack/btm/btm_sec.h"
 #include "stack/eatt/eatt.h"
 #include "stack/gatt/gatt_int.h"
+#include "stack/include/bt_hdr.h"
 #include "stack/include/l2cap_acl_interface.h"
 
 using base::StringPrintf;

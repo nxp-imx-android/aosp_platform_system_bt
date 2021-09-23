@@ -18,13 +18,14 @@
 #define BT_STACK_FUZZ_A2DP_CODECINFO_FUNCTIONS_H_
 
 #include <fuzzer/FuzzedDataProvider.h>
-#include <vector>
-#include "a2dp_codec_api.h"
-#include "bt_types.h"
-#include "fuzzers/a2dp/codec/a2dpCodecHelperFunctions.h"
-#include "fuzzers/common/commonFuzzHelpers.h"
 
+#include <vector>
+
+#include "a2dp_codec_api.h"
+#include "fuzzers/a2dp/codec/a2dpCodecHelperFunctions.h"
 #include "fuzzers/a2dp/codec/a2dpCodecInfoFuzzHelpers.h"
+#include "fuzzers/common/commonFuzzHelpers.h"
+#include "stack/include/bt_hdr.h"
 
 #define MAX_PACKET_SIZE 2048
 
@@ -205,6 +206,11 @@ std::vector<std::function<void(FuzzedDataProvider*, uint8_t*)>>
         [](FuzzedDataProvider* fdp, uint8_t*) -> void {
           AvdtpSepConfig cfg_retval;
           A2DP_InitCodecConfig(getArbitraryBtavCodecIndex(fdp), &cfg_retval);
+        },
+
+        // A2DP_GetEecoderEffectiveFrameSize
+        [](FuzzedDataProvider* fdp, uint8_t* codec_info) -> void {
+          A2DP_GetEecoderEffectiveFrameSize(codec_info);
         },
 
         // A2DP_CodecInfoString

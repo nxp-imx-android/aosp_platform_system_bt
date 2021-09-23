@@ -64,7 +64,6 @@ extern std::map<std::string, int> mock_function_count_map;
 #include "btif/include/btif_bqr.h"
 #include "btif/include/btif_config.h"
 #include "btif/include/btif_debug.h"
-#include "btif/include/btif_debug_btsnoop.h"
 #include "btif/include/btif_debug_conn.h"
 #include "btif/include/btif_hf.h"
 #include "btif/include/btif_keystore.h"
@@ -77,8 +76,6 @@ extern std::map<std::string, int> mock_function_count_map;
 #include "common/os_utils.h"
 #include "device/include/interop.h"
 #include "gd/common/init_flags.h"
-#include "hci/include/btsnoop.h"
-#include "hci/include/btsnoop_mem.h"
 #include "main/shim/dumpsys.h"
 #include "main/shim/shim.h"
 #include "osi/include/alarm.h"
@@ -88,7 +85,6 @@ extern std::map<std::string, int> mock_function_count_map;
 #include "osi/include/wakelock.h"
 #include "stack/gatt/connection_manager.h"
 #include "stack/include/avdt_api.h"
-#include "stack/include/btu.h"
 #include "utils/include/bt_utils.h"
 
 // Mocked compile conditionals, if any

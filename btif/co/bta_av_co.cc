@@ -27,7 +27,6 @@
 #include <vector>
 
 #include "bt_target.h"  // Must be first to define build configuration
-
 #include "bta/include/bta_av_api.h"
 #include "bta/include/bta_av_ci.h"
 #include "btif/include/btif_a2dp_source.h"
@@ -37,6 +36,7 @@
 #include "stack/include/a2dp_codec_api.h"
 #include "stack/include/a2dp_error_codes.h"
 #include "stack/include/avdt_api.h"
+#include "stack/include/bt_hdr.h"
 
 // Macro to retrieve the number of elements in a statically allocated array
 #define BTA_AV_CO_NUM_ELEMENTS(__a) (sizeof(__a) / sizeof((__a)[0]))
@@ -427,6 +427,13 @@ class BtaAvCo {
    * @return true on success, otherwise false
    */
   bool SetCodecAudioConfig(const btav_a2dp_codec_config_t& codec_audio_config);
+
+  /**
+   * Get the Source encoder maximum frame size for the current codec.
+   *
+   * @return the effective frame size for the current codec
+   */
+  int GetSourceEncoderEffectiveFrameSize();
 
   /**
    * Report the source codec state for a peer
@@ -1642,6 +1649,12 @@ bool BtaAvCo::SetCodecAudioConfig(
   return true;
 }
 
+int BtaAvCo::GetSourceEncoderEffectiveFrameSize() {
+  std::lock_guard<std::recursive_mutex> lock(codec_lock_);
+
+  return A2DP_GetEecoderEffectiveFrameSize(codec_config_);
+}
+
 bool BtaAvCo::ReportSourceCodecState(BtaAvCoPeer* p_peer) {
   btav_a2dp_codec_config_t codec_config;
   std::vector<btav_a2dp_codec_config_t> codecs_local_capabilities;
@@ -2199,6 +2212,10 @@ bool bta_av_co_set_codec_user_config(
 bool bta_av_co_set_codec_audio_config(
     const btav_a2dp_codec_config_t& codec_audio_config) {
   return bta_av_co_cb.SetCodecAudioConfig(codec_audio_config);
+}
+
+int bta_av_co_get_encoder_effective_frame_size() {
+  return bta_av_co_cb.GetSourceEncoderEffectiveFrameSize();
 }
 
 btav_a2dp_scmst_info_t bta_av_co_get_scmst_info(

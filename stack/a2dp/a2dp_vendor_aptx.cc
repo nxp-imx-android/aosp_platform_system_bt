@@ -23,19 +23,18 @@
 
 #define LOG_TAG "a2dp_vendor_aptx"
 
-#include "bt_target.h"
-
 #include "a2dp_vendor_aptx.h"
 
+#include <base/logging.h>
 #include <string.h>
 
-#include <base/logging.h>
 #include "a2dp_vendor.h"
 #include "a2dp_vendor_aptx_encoder.h"
 #include "bt_utils.h"
 #include "btif_av_co.h"
 #include "osi/include/log.h"
 #include "osi/include/osi.h"
+#include "stack/include/bt_hdr.h"
 
 // data type for the aptX Codec Information Element */
 typedef struct {
@@ -76,6 +75,7 @@ static const tA2DP_ENCODER_INTERFACE a2dp_encoder_interface_aptx = {
     a2dp_vendor_aptx_feeding_reset,
     a2dp_vendor_aptx_feeding_flush,
     a2dp_vendor_aptx_get_encoder_interval_ms,
+    a2dp_vendor_aptx_get_effective_frame_size,
     a2dp_vendor_aptx_send_frames,
     nullptr  // set_transmit_queue_length
 };

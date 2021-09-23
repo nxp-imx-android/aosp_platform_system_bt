@@ -15,17 +15,12 @@
 #   limitations under the License.
 
 from abc import ABC
-from datetime import datetime
-import inspect
 import logging
 import os
 import pathlib
 import shutil
 import signal
-import socket
 import subprocess
-import time
-from typing import List
 
 import grpc
 
@@ -36,7 +31,6 @@ from cert.logging_client_interceptor import LoggingClientInterceptor
 from cert.os_utils import get_gd_root
 from cert.os_utils import read_crash_snippet_and_log_tail
 from cert.os_utils import is_subprocess_alive
-from cert.os_utils import make_ports_available
 from cert.os_utils import TerminalColor
 from facade import rootservice_pb2_grpc as facade_rootservice_pb2_grpc
 from hal import hal_facade_pb2_grpc
@@ -56,6 +50,8 @@ from shim.facade import facade_pb2_grpc as shim_facade_pb2_grpc
 
 MOBLY_CONTROLLER_CONFIG_NAME = "GdDevice"
 ACTS_CONTROLLER_REFERENCE_NAME = "gd_devices"
+
+GRPC_START_TIMEOUT_SEC = 15
 
 
 def create_core(configs):
@@ -144,35 +140,22 @@ class GdDeviceBaseCore(ABC):
         """Core method to set up device for test
         :return:
         """
-        self.signal_port_available = make_ports_available([self.signal_port])
-        if self.signal_port_available is not True:
-            return
         # Start backing process
-        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as signal_socket:
-            # Setup signaling socket
-            signal_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-            signal_socket.bind(("localhost", self.signal_port))
-            signal_socket.listen(1)
-            signal_socket.settimeout(300)  # 5 minute timeout for blocking socket operations
-
-            # Start backing process
-            logging.debug("Running %s" % " ".join(self.cmd))
-            self.backing_process = subprocess.Popen(
-                self.cmd,
-                cwd=get_gd_root(),
-                env=self.environment,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.STDOUT,
-                universal_newlines=True)
-            if not self.backing_process:
-                return
-            self.is_backing_process_alive = is_subprocess_alive(self.backing_process)
-            if not self.is_backing_process_alive:
-                return
-
-            # Wait for process to be ready
-            logging.debug("Waiting for backing_process accept.")
-            signal_socket.accept()
+        logging.debug("[%s] Running %s %s" % (self.type_identifier, self.label, " ".join(self.cmd)))
+        self.backing_process = subprocess.Popen(
+            self.cmd,
+            cwd=get_gd_root(),
+            env=self.environment,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            universal_newlines=True)
+        if not self.backing_process:
+            logging.error("[%s] failed to open backing process for %s" % (self.type_identifier, self.label))
+            return
+        self.is_backing_process_alive = is_subprocess_alive(self.backing_process)
+        if not self.is_backing_process_alive:
+            logging.error("[%s] backing process for %s died after starting" % (self.type_identifier, self.label))
+            return
 
         self.backing_process_logger = AsyncSubprocessLogger(
             self.backing_process, [self.backing_process_log_path],
@@ -182,6 +165,18 @@ class GdDeviceBaseCore(ABC):
 
         # Setup gRPC management channels
         self.grpc_root_server_channel = grpc.insecure_channel("localhost:%d" % self.grpc_root_server_port)
+
+        self.grpc_root_server_ready = False
+        try:
+            logging.info("[%s] Waiting to connect to gRPC root server for %s, timeout is %d seconds" %
+                         (self.type_identifier, self.label, GRPC_START_TIMEOUT_SEC))
+            grpc.channel_ready_future(self.grpc_root_server_channel).result(timeout=GRPC_START_TIMEOUT_SEC)
+            logging.info("[%s] Successfully connected to gRPC root server for %s" % (self.type_identifier, self.label))
+            self.grpc_root_server_ready = True
+        except grpc.FutureTimeoutError:
+            logging.error("[%s] Failed to connect to gRPC root server for %s" % (self.type_identifier, self.label))
+            return
+
         self.grpc_channel = grpc.insecure_channel("localhost:%d" % self.grpc_port)
 
         if self.verbose_mode:
@@ -272,7 +267,7 @@ def merge_coverage_profdata_for_host(backing_process_profraw_path, profdata_path
         logging.info("[%s] Skip coverage report as llvm-profdata is not found at %s" % (label, str(llvm_profdata)))
         return
     logging.info("[%s] Merging coverage profdata" % label)
-    profdata_path_tmp = profdata_path.parent / (profdata_path.stem + "_tmp." + profdata_path.suffix)
+    profdata_path_tmp = profdata_path.parent / (profdata_path.stem + "_tmp" + profdata_path.suffix)
     # Merge with existing profdata if possible
     profdata_cmd = [str(llvm_profdata), "merge", "-sparse", str(backing_process_profraw_path)]
     if profdata_path.is_file():

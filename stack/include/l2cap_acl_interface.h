@@ -17,7 +17,7 @@
 
 #pragma once
 
-#include "bt_common.h"
+#include "stack/include/bt_hdr.h"
 #include "types/raw_address.h"
 
 // This header contains functions for L2cap-ACL to invoke

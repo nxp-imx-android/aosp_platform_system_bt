@@ -16,9 +16,11 @@
 
 #pragma once
 
+#include "device/include/esco_parameters.h"
 #include "stack/btm/btm_sec.h"
 #include "stack/btm/neighbor_inquiry.h"
 #include "stack/include/acl_api_types.h"
+#include "stack/include/bt_hdr.h"
 #include "stack/include/btm_api_types.h"
 #include "stack/include/btm_ble_api_types.h"
 #include "types/hci_role.h"
@@ -1296,28 +1298,6 @@ tBTM_STATUS BTM_SetEScoMode(enh_esco_params_t* p_parms);
  *
  ******************************************************************************/
 tBTM_STATUS BTM_RegForEScoEvts(uint16_t sco_inx, tBTM_ESCO_CBACK* p_esco_cback);
-
-/*******************************************************************************
- *
- * Function         BTM_ChangeEScoLinkParms
- *
- * Description      This function requests renegotiation of the parameters on
- *                  the current eSCO Link.  If any of the changes are accepted
- *                  by the controllers, the BTM_ESCO_CHG_EVT event is sent in
- *                  the tBTM_ESCO_CBACK function with the current settings of
- *                  the link. The callback is registered through the call to
- *                  BTM_SetEScoMode.
- *
- *
- * Returns          BTM_CMD_STARTED if command is successfully initiated.
- *                  BTM_ILLEGAL_VALUE if no connection for specified sco_inx.
- *                  BTM_NO_RESOURCES - not enough resources to initiate command.
- *                  BTM_MODE_UNSUPPORTED if local controller does not support
- *                      1.2 specification.
- *
- ******************************************************************************/
-tBTM_STATUS BTM_ChangeEScoLinkParms(uint16_t sco_inx,
-                                    tBTM_CHG_ESCO_PARAMS* p_parms);
 
 /*******************************************************************************
  *

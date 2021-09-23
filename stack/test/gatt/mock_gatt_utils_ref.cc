@@ -14,7 +14,9 @@
  * limitations under the License.
  */
 
+#include "common/message_loop_thread.h"
 #include "stack/gatt/gatt_int.h"
+#include "stack/include/bt_hdr.h"
 #include "utils/include/bt_utils.h"
 
 /** stack/btu/btu_task.cc, indirect reference, gatt_utils.cc -> libosi */

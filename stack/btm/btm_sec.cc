@@ -31,16 +31,16 @@
 #include <frameworks/proto_logging/stats/enums/bluetooth/hci/enums.pb.h>
 #include <string.h>
 
-#include "bt_types.h"
 #include "btif/include/btif_storage.h"
 #include "common/metrics.h"
 #include "common/time_util.h"
 #include "device/include/controller.h"
-#include "hcimsgs.h"
 #include "l2c_api.h"
 #include "main/shim/btm_api.h"
 #include "main/shim/dumpsys.h"
 #include "main/shim/shim.h"
+#include "osi/include/allocator.h"
+#include "osi/include/compat.h"
 #include "osi/include/log.h"
 #include "osi/include/osi.h"
 #include "stack/btm/btm_dev.h"
@@ -2563,7 +2563,6 @@ void btm_io_capabilities_req(const RawAddress& p) {
 
   btm_sec_change_pairing_state(BTM_PAIR_STATE_WAIT_LOCAL_IOCAPS);
 
-  uint8_t callback_rc = BTM_SUCCESS;
   if (p_dev_rec->sm4 & BTM_SM4_UPGRADE) {
     p_dev_rec->sm4 &= ~BTM_SM4_UPGRADE;
 
@@ -2572,8 +2571,8 @@ void btm_io_capabilities_req(const RawAddress& p) {
     evt_data.auth_req = BTM_AUTH_SPGB_YES;
   } else if (btm_cb.api.p_sp_callback) {
     /* the callback function implementation may change the IO capability... */
-    callback_rc = (*btm_cb.api.p_sp_callback)(BTM_SP_IO_REQ_EVT,
-                                              (tBTM_SP_EVT_DATA*)&evt_data);
+    (*btm_cb.api.p_sp_callback)(BTM_SP_IO_REQ_EVT,
+                                (tBTM_SP_EVT_DATA*)&evt_data);
   }
 
   if ((btm_cb.pairing_flags & BTM_PAIR_FLAGS_WE_STARTED_DD)) {
@@ -3141,6 +3140,13 @@ void btm_sec_auth_complete(uint16_t handle, tHCI_STATUS status) {
           // indicate that this is encryption after authentication
           BTM_SetEncryption(p_dev_rec->bd_addr, BT_TRANSPORT_BR_EDR, NULL, NULL,
                             BTM_BLE_SEC_NONE);
+        } else if (p_dev_rec->IsLocallyInitiated()) {
+          // Encryption will be set in role_changed callback
+          BTM_TRACE_DEBUG(
+              "%s auth completed in role=peripheral, try to switch role and "
+              "encrypt",
+              __func__);
+          BTM_SwitchRoleToCentral(p_dev_rec->RemoteAddress());
         }
       }
       l2cu_start_post_bond_timer(p_dev_rec->hci_handle);

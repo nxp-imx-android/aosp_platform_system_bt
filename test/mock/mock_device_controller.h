@@ -33,12 +33,12 @@ extern std::map<std::string, int> mock_function_count_map;
 //       for this effort.  This compilation unit may compile as-is, or
 //       may need attention to prune the inclusion set.
 #include <base/logging.h>
-#include "bt_types.h"
+
+#include "btcore/include/device_features.h"
 #include "btcore/include/event_mask.h"
 #include "btcore/include/module.h"
 #include "btcore/include/version.h"
 #include "device/include/controller.h"
-#include "hcimsgs.h"
 #include "main/shim/controller.h"
 #include "main/shim/shim.h"
 #include "osi/include/future.h"

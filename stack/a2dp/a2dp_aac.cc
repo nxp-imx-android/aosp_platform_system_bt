@@ -23,19 +23,18 @@
 
 #define LOG_TAG "a2dp_aac"
 
-#include "bt_target.h"
-
 #include "a2dp_aac.h"
 
+#include <base/logging.h>
 #include <string.h>
 
-#include <base/logging.h>
 #include "a2dp_aac_decoder.h"
 #include "a2dp_aac_encoder.h"
 #include "bt_utils.h"
 #include "osi/include/log.h"
 #include "osi/include/osi.h"
 #include "osi/include/properties.h"
+#include "stack/include/bt_hdr.h"
 
 #define A2DP_AAC_DEFAULT_BITRATE 320000  // 320 kbps
 #define A2DP_AAC_MIN_BITRATE 64000       // 64 kbps
@@ -117,6 +116,7 @@ static const tA2DP_ENCODER_INTERFACE a2dp_encoder_interface_aac = {
     a2dp_aac_feeding_reset,
     a2dp_aac_feeding_flush,
     a2dp_aac_get_encoder_interval_ms,
+    a2dp_aac_get_effective_frame_size,
     a2dp_aac_send_frames,
     nullptr  // set_transmit_queue_length
 };
@@ -1515,25 +1515,7 @@ bool A2dpCodecConfigAacSink::init() {
   return true;
 }
 
-uint64_t A2dpCodecConfigAacSink::encoderIntervalMs() const {
-  // TODO: This method applies only to Source codecs
-  return 0;
-}
-
-int A2dpCodecConfigAacSink::getEffectiveMtu() const {
-  // TODO: This method applies only to Source codecs
-  return 0;
-}
-
 bool A2dpCodecConfigAacSink::useRtpHeaderMarkerBit() const {
-  // TODO: This method applies only to Source codecs
-  return false;
-}
-
-bool A2dpCodecConfigAacSink::updateEncoderUserConfig(
-    UNUSED_ATTR const tA2DP_ENCODER_INIT_PEER_PARAMS* p_peer_params,
-    UNUSED_ATTR bool* p_restart_input, UNUSED_ATTR bool* p_restart_output,
-    UNUSED_ATTR bool* p_config_updated) {
   // TODO: This method applies only to Source codecs
   return false;
 }

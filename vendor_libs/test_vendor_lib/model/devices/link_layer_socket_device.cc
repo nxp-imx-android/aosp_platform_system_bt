@@ -41,12 +41,17 @@ void LinkLayerSocketDevice::TimerTick() {
     ssize_t bytes_received =
         socket_->Recv(size_bytes_->data() + offset_, kSizeBytes);
     if (bytes_received <= 0) {
+      if (errno == EAGAIN || errno == EWOULDBLOCK) {
+        // Nothing available yet.
+        // LOG_DEBUG("Nothing available yet...");
+        return;
+      }
       LOG_INFO("Closing socket, received: %zd, %s", bytes_received,
                strerror(errno));
-      socket_->Close();
+      Close();
       return;
     }
-    if (bytes_received < bytes_left_) {
+    if ((size_t)bytes_received < bytes_left_) {
       bytes_left_ -= bytes_received;
       offset_ += bytes_received;
       return;
@@ -61,12 +66,17 @@ void LinkLayerSocketDevice::TimerTick() {
   ssize_t bytes_received =
       socket_->Recv(received_->data() + offset_, bytes_left_);
   if (bytes_received <= 0) {
+    if (errno == EAGAIN || errno == EWOULDBLOCK) {
+        // Nothing available yet.
+        // LOG_DEBUG("Nothing available yet...");
+        return;
+      }
     LOG_INFO("Closing socket, received: %zd, %s", bytes_received,
              strerror(errno));
-    socket_->Close();
+    Close();
     return;
   }
-  if (bytes_received < bytes_left_) {
+  if ((size_t)bytes_received < bytes_left_) {
     bytes_left_ -= bytes_received;
     offset_ += bytes_received;
     return;
@@ -79,6 +89,14 @@ void LinkLayerSocketDevice::TimerTick() {
           received_));
   ASSERT(packet.IsValid());
   SendLinkLayerPacket(packet, phy_type_);
+}
+
+void LinkLayerSocketDevice::Close()
+{
+  if (socket_) {
+    socket_->Close();
+  }
+  Device::Close();
 }
 
 void LinkLayerSocketDevice::IncomingPacket(

@@ -28,16 +28,13 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "bt_common.h"
-#include "bt_types.h"
-#include "btu.h"
 #include "common/time_util.h"
-#include "hcimsgs.h"
 #include "l2c_api.h"
 #include "l2c_int.h"
 #include "l2cdefs.h"
-
+#include "osi/include/allocator.h"
 #include "osi/include/log.h"
+#include "stack/include/bt_hdr.h"
 
 /* Flag passed to retransmit_i_frames() when all packets should be retransmitted
  */

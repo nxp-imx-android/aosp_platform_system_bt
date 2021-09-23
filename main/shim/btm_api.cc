@@ -16,6 +16,8 @@
 
 #define LOG_TAG "bt_shim_btm"
 
+#include "main/shim/btm_api.h"
+
 #include <base/callback.h>
 
 #include <mutex>
@@ -29,13 +31,14 @@
 #include "gd/security/security_module.h"
 #include "gd/security/ui.h"
 #include "main/shim/btm.h"
-#include "main/shim/btm_api.h"
 #include "main/shim/controller.h"
 #include "main/shim/helpers.h"
 #include "main/shim/metric_id_api.h"
 #include "main/shim/shim.h"
 #include "main/shim/stack.h"
+#include "osi/include/allocator.h"
 #include "stack/btm/btm_int_types.h"
+#include "stack/include/bt_hdr.h"
 #include "types/raw_address.h"
 
 using bluetooth::common::MetricIdAllocator;

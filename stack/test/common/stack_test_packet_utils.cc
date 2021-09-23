@@ -16,11 +16,13 @@
  *
  ******************************************************************************/
 
-#include "hci_layer.h"
-#include "l2c_api.h"
-#include "osi/include/allocator.h"
-
 #include "stack_test_packet_utils.h"
+
+#include "hci/include/hci_layer.h"
+#include "osi/include/allocator.h"
+#include "stack/include/bt_hdr.h"
+#include "stack/include/l2c_api.h"
+#include "stack/include/l2cdefs.h"
 
 namespace bluetooth {
 

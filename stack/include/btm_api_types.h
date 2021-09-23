@@ -20,19 +20,20 @@
 #define BTM_API_TYPES_H
 
 #include <base/strings/stringprintf.h>
+
 #include <cstdint>
 #include <string>
 
 #include "device/include/esco_parameters.h"
 #include "internal_include/bt_target.h"
+#include "stack/include/bt_hdr.h"
+#include "stack/include/bt_name.h"
 #include "stack/include/btm_status.h"
+#include "stack/include/hci_mode.h"
 #include "stack/include/hcidefs.h"
 #include "stack/include/smp_api_types.h"
 #include "types/ble_address_with_type.h"
 #include "types/bt_transport.h"
-
-/* Device name of peer (may be truncated to save space in BTM database) */
-typedef uint8_t tBTM_BD_NAME[BTM_MAX_REM_BD_NAME_LEN + 1];
 
 /* Structure returned with Vendor Specific Command complete callback */
 typedef struct {
@@ -386,7 +387,6 @@ typedef void(tBTM_SCO_CB)(uint16_t sco_inx);
  *  eSCO Types
  ***************/
 /* tBTM_ESCO_CBACK event types */
-#define BTM_ESCO_CHG_EVT 1
 #define BTM_ESCO_CONN_REQ_EVT 2
 typedef uint8_t tBTM_ESCO_EVT;
 
@@ -401,24 +401,9 @@ typedef struct {
 
 /* Returned by BTM_ReadEScoLinkParms() */
 struct tBTM_ESCO_DATA {
-  uint16_t rx_pkt_len;
-  uint16_t tx_pkt_len;
   RawAddress bd_addr;
   uint8_t link_type; /* BTM_LINK_TYPE_SCO or BTM_LINK_TYPE_ESCO */
-  uint8_t tx_interval;
-  uint8_t retrans_window;
-  uint8_t air_mode;
 };
-
-typedef struct {
-  uint16_t sco_inx;
-  uint16_t rx_pkt_len;
-  uint16_t tx_pkt_len;
-  RawAddress bd_addr;
-  uint8_t hci_status;
-  uint8_t tx_interval;
-  uint8_t retrans_window;
-} tBTM_CHG_ESCO_EVT_DATA;
 
 typedef struct {
   uint16_t sco_inx;
@@ -428,7 +413,6 @@ typedef struct {
 } tBTM_ESCO_CONN_REQ_EVT_DATA;
 
 typedef union {
-  tBTM_CHG_ESCO_EVT_DATA chg_evt;
   tBTM_ESCO_CONN_REQ_EVT_DATA conn_evt;
 } tBTM_ESCO_EVT_DATA;
 

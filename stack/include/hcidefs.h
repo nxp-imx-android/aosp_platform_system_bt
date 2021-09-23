@@ -698,29 +698,6 @@ typedef enum : uint16_t {
 #define HCI_CR_CONN_NOT_ALLOW_SWITCH 0x00
 #define HCI_CR_CONN_ALLOW_SWITCH 0x01
 
-/* HCI mode defenitions */
-typedef enum : uint8_t {
-  HCI_MODE_ACTIVE = 0x00,
-  HCI_MODE_HOLD = 0x01,
-  HCI_MODE_SNIFF = 0x02,
-  HCI_MODE_PARK = 0x03,
-} tHCI_MODE;
-
-inline std::string hci_mode_text(const tHCI_MODE& mode) {
-  switch (mode) {
-    case HCI_MODE_ACTIVE:
-      return std::string("active");
-    case HCI_MODE_HOLD:
-      return std::string("hold");
-    case HCI_MODE_SNIFF:
-      return std::string("sniff");
-    case HCI_MODE_PARK:
-      return std::string("park");
-    default:
-      return std::string("UNKNOWN");
-  }
-}
-
 /* Page scan period modes */
 #define HCI_PAGE_SCAN_REP_MODE_R1 0x01
 
@@ -752,6 +729,7 @@ inline std::string hci_mode_text(const tHCI_MODE& mode) {
 #define HCI_EIR_OOB_COD_TYPE 0x0D
 #define HCI_EIR_OOB_SSP_HASH_C_TYPE 0x0E
 #define HCI_EIR_OOB_SSP_RAND_R_TYPE 0x0F
+#define HCI_EIR_RSI_TYPE 0x2E
 
 /* Definitions for Write Simple Pairing Mode */
 #define HCI_SP_MODE_ENABLED 0x01
@@ -856,7 +834,6 @@ typedef enum : uint8_t {
  * This is 1-byte for opcode and 1 byte for length
 */
 #define HCIE_PREAMBLE_SIZE 2
-#define HCI_SCO_PREAMBLE_SIZE 3
 
 // Packet boundary flags
 constexpr uint8_t kFIRST_NON_AUTOMATICALLY_FLUSHABLE = 0x0;

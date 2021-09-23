@@ -23,6 +23,7 @@
 #include <base/bind.h>
 #include <base/callback.h>
 #include <base/strings/string_number_conversions.h>  // HexEncode
+
 #include <cstdint>
 #include <vector>
 
@@ -31,11 +32,13 @@
 #include "bta/include/bta_hearing_aid_api.h"
 #include "device/include/controller.h"
 #include "embdrv/g722/g722_enc_dec.h"
+#include "osi/include/compat.h"
 #include "osi/include/log.h"
 #include "osi/include/properties.h"
 #include "stack/btm/btm_sec.h"
 #include "stack/include/acl_api.h"        // BTM_ReadRSSI
 #include "stack/include/acl_api_types.h"  // tBTM_RSSI_RESULT
+#include "stack/include/bt_hdr.h"
 #include "stack/include/gap_api.h"
 #include "stack/include/l2c_api.h"  // L2CAP_MIN_OFFSET
 #include "types/bluetooth/uuid.h"
@@ -974,16 +977,6 @@ class HearingAidImpl : public HearingAid {
     if (encoder_state_left == nullptr) {
       encoder_state_init();
       seq_counter = 0;
-
-      // use the best codec avaliable for this pair of devices.
-      uint16_t codecs = hearingDevice.codecs;
-      if (hearingDevice.hi_sync_id != 0) {
-        for (const auto& device : hearingDevices.devices) {
-          if (device.hi_sync_id != hearingDevice.hi_sync_id) continue;
-
-          codecs &= device.codecs;
-        }
-      }
 
       CodecConfiguration codec;
       if (codec_in_use == CODEC_G722_24KHZ) {

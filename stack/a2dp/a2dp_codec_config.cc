@@ -38,6 +38,7 @@
 #include "bta/av/bta_av_int.h"
 #include "osi/include/log.h"
 #include "osi/include/properties.h"
+#include "stack/include/bt_hdr.h"
 
 /* The Media Type offset within the codec info byte array */
 #define A2DP_MEDIA_TYPE_OFFSET 1
@@ -389,19 +390,6 @@ bool A2dpCodecConfig::setCodecUserConfig(
     *p_restart_output = true;
   }
 
-  bool encoder_restart_input = *p_restart_input;
-  bool encoder_restart_output = *p_restart_output;
-  bool encoder_config_updated = *p_config_updated;
-
-  if (!a2dp_offload_status) {
-    if (updateEncoderUserConfig(p_peer_params, &encoder_restart_input,
-                                &encoder_restart_output,
-                                &encoder_config_updated)) {
-      if (encoder_restart_input) *p_restart_input = true;
-      if (encoder_restart_output) *p_restart_output = true;
-      if (encoder_config_updated) *p_config_updated = true;
-    }
-  }
   if (*p_restart_input || *p_restart_output) *p_config_updated = true;
 
   return true;
@@ -519,8 +507,6 @@ void A2dpCodecConfig::debug_codec_dump(int fd) {
   std::string result;
   dprintf(fd, "\nA2DP %s State:\n", name().c_str());
   dprintf(fd, "  Priority: %d\n", codecPriority());
-  dprintf(fd, "  Encoder interval (ms): %" PRIu64 "\n", encoderIntervalMs());
-  dprintf(fd, "  Effective MTU: %d\n", getEffectiveMtu());
 
   result = codecConfig2Str(getCodecConfig());
   dprintf(fd, "  Config: %s\n", result.c_str());
@@ -1554,4 +1540,29 @@ std::string A2DP_CodecInfoString(const uint8_t* p_codec_info) {
   }
 
   return "Unsupported codec type: " + loghex(codec_type);
+}
+
+int A2DP_GetEecoderEffectiveFrameSize(const uint8_t* p_codec_info) {
+  tA2DP_CODEC_TYPE codec_type = A2DP_GetCodecType(p_codec_info);
+
+  const tA2DP_ENCODER_INTERFACE* a2dp_encoder_interface = nullptr;
+  switch (codec_type) {
+    case A2DP_MEDIA_CT_SBC:
+      a2dp_encoder_interface = A2DP_GetEncoderInterfaceSbc(p_codec_info);
+      break;
+#if !defined(EXCLUDE_NONSTANDARD_CODECS)
+    case A2DP_MEDIA_CT_AAC:
+      a2dp_encoder_interface = A2DP_GetEncoderInterfaceAac(p_codec_info);
+      break;
+    case A2DP_MEDIA_CT_NON_A2DP:
+      a2dp_encoder_interface = A2DP_VendorGetEncoderInterface(p_codec_info);
+      break;
+#endif
+    default:
+      break;
+  }
+  if (a2dp_encoder_interface == nullptr) {
+    return 0;
+  }
+  return a2dp_encoder_interface->get_effective_frame_size();
 }

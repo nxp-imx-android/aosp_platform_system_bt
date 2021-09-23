@@ -21,17 +21,19 @@
  *  this file contains the GATT server functions
  *
  ******************************************************************************/
-#include "bt_target.h"
-#include "osi/include/osi.h"
-
 #include <string.h>
 
+#include "bt_target.h"
 #include "gatt_int.h"
 #include "l2c_api.h"
+#include "osi/include/allocator.h"
 #include "osi/include/log.h"
+#include "osi/include/osi.h"
 #include "stack/eatt/eatt.h"
+#include "stack/include/bt_hdr.h"
 #include "stack/l2cap/l2c_int.h"
 #define GATT_MTU_REQ_MIN_LEN 2
+#define L2CAP_PKT_OVERHEAD 4
 
 using base::StringPrintf;
 using bluetooth::Uuid;
@@ -815,7 +817,7 @@ static void gatts_process_mtu_req(tGATT_TCB& tcb, uint16_t cid, uint16_t len,
 
   LOG(INFO) << "MTU request PDU with MTU size " << +tcb.payload_size;
 
-  BTM_SetBleDataLength(tcb.peer_bda, tcb.payload_size);
+  BTM_SetBleDataLength(tcb.peer_bda, tcb.payload_size + L2CAP_PKT_OVERHEAD);
 
   tGATT_SR_MSG gatt_sr_msg;
   gatt_sr_msg.mtu = tcb.payload_size;

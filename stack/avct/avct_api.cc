@@ -23,18 +23,20 @@
  ******************************************************************************/
 
 #include "avct_api.h"
+
 #include <string.h>
+
 #include "avct_int.h"
-#include "bt_common.h"
 #include "bt_target.h"
-#include "bt_types.h"
 #include "bt_utils.h"
 #include "bta/include/bta_api.h"
 #include "btm_api.h"
 #include "l2c_api.h"
 #include "l2cdefs.h"
+#include "osi/include/allocator.h"
 #include "osi/include/osi.h"
 #include "stack/btm/btm_sec.h"
+#include "stack/include/bt_hdr.h"
 
 /* Control block for AVCT */
 tAVCT_CB avct_cb;

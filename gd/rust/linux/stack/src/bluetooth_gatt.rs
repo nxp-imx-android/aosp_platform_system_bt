@@ -5,16 +5,15 @@ use btif_macros::{btif_callback, btif_callbacks_dispatcher};
 use bt_topshim::bindings::root::bluetooth::Uuid;
 use bt_topshim::btif::{BluetoothInterface, RawAddress};
 use bt_topshim::profiles::gatt::{
-    BtGattNotifyParams, BtGattReadParams, Gatt, GattClientCallbacks, GattClientCallbacksDispatcher,
-    GattServerCallbacksDispatcher, GattStatus,
+    BtGattDbElement, BtGattNotifyParams, BtGattReadParams, Gatt, GattClientCallbacks,
+    GattClientCallbacksDispatcher, GattServerCallbacksDispatcher, GattStatus,
 };
 use bt_topshim::topstack;
 
+use log::{debug, warn};
 use num_traits::cast::{FromPrimitive, ToPrimitive};
-
 use std::collections::HashSet;
 use std::sync::{Arc, Mutex};
-
 use tokio::sync::mpsc::Sender;
 
 use crate::{Message, RPCProxy};
@@ -258,6 +257,87 @@ pub trait IBluetoothGatt {
     );
 }
 
+#[derive(Debug, Default)]
+/// Represents a GATT Descriptor.
+pub struct BluetoothGattDescriptor {
+    pub uuid: Uuid128Bit,
+    pub instance_id: i32,
+    pub permissions: i32,
+}
+
+impl BluetoothGattDescriptor {
+    fn new(uuid: Uuid128Bit, instance_id: i32, permissions: i32) -> BluetoothGattDescriptor {
+        BluetoothGattDescriptor { uuid, instance_id, permissions }
+    }
+}
+
+#[derive(Debug, Default)]
+/// Represents a GATT Characteristic.
+pub struct BluetoothGattCharacteristic {
+    pub uuid: Uuid128Bit,
+    pub instance_id: i32,
+    pub properties: i32,
+    pub permissions: i32,
+    pub key_size: i32,
+    pub write_type: GattWriteType,
+    pub descriptors: Vec<BluetoothGattDescriptor>,
+}
+
+impl BluetoothGattCharacteristic {
+    pub const PROPERTY_BROADCAST: i32 = 0x01;
+    pub const PROPERTY_READ: i32 = 0x02;
+    pub const PROPERTY_WRITE_NO_RESPONSE: i32 = 0x04;
+    pub const PROPERTY_WRITE: i32 = 0x08;
+    pub const PROPERTY_NOTIFY: i32 = 0x10;
+    pub const PROPERTY_INDICATE: i32 = 0x20;
+    pub const PROPERTY_SIGNED_WRITE: i32 = 0x40;
+    pub const PROPERTY_EXTENDED_PROPS: i32 = 0x80;
+
+    fn new(
+        uuid: Uuid128Bit,
+        instance_id: i32,
+        properties: i32,
+        permissions: i32,
+    ) -> BluetoothGattCharacteristic {
+        BluetoothGattCharacteristic {
+            uuid,
+            instance_id,
+            properties,
+            permissions,
+            write_type: if properties & BluetoothGattCharacteristic::PROPERTY_WRITE_NO_RESPONSE != 0
+            {
+                GattWriteType::WriteNoRsp
+            } else {
+                GattWriteType::Write
+            },
+            key_size: 16,
+            descriptors: vec![],
+        }
+    }
+}
+
+#[derive(Debug, Default)]
+/// Represents a GATT Service.
+pub struct BluetoothGattService {
+    pub uuid: Uuid128Bit,
+    pub instance_id: i32,
+    pub service_type: i32,
+    pub characteristics: Vec<BluetoothGattCharacteristic>,
+    pub included_services: Vec<BluetoothGattService>,
+}
+
+impl BluetoothGattService {
+    fn new(uuid: Uuid128Bit, instance_id: i32, service_type: i32) -> BluetoothGattService {
+        BluetoothGattService {
+            uuid,
+            instance_id,
+            service_type,
+            characteristics: vec![],
+            included_services: vec![],
+        }
+    }
+}
+
 /// Callback for GATT Client API.
 pub trait IBluetoothGattCallback: RPCProxy {
     /// When the `register_client` request is done.
@@ -277,6 +357,9 @@ pub trait IBluetoothGattCallback: RPCProxy {
 
     /// The completion of IBluetoothGatt::read_phy.
     fn on_phy_read(&self, addr: String, tx_phy: LePhy, rx_phy: LePhy, status: GattStatus);
+
+    /// When GATT db is available.
+    fn on_search_complete(&self, addr: String, services: Vec<BluetoothGattService>, status: i32);
 
     /// The completion of IBluetoothGatt::read_characteristic.
     fn on_characteristic_read(&self, addr: String, status: i32, handle: i32, value: Vec<u8>);
@@ -311,6 +394,9 @@ pub trait IBluetoothGattCallback: RPCProxy {
         timeout: i32,
         status: i32,
     );
+
+    /// When there is an addition, removal, or change of a GATT service.
+    fn on_service_changed(&self, addr: String);
 }
 
 /// Interface for scanner callbacks to clients, passed to `IBluetoothGatt::register_scanner`.
@@ -322,11 +408,28 @@ pub trait IScannerCallback {
 #[derive(Debug, FromPrimitive, ToPrimitive)]
 #[repr(u8)]
 /// GATT write type.
+enum GattDbElementType {
+    PrimaryService = 0,
+    SecondaryService = 1,
+    IncludedService = 2,
+    Characteristic = 3,
+    Descriptor = 4,
+}
+
+#[derive(Debug, FromPrimitive, ToPrimitive)]
+#[repr(u8)]
+/// GATT write type.
 pub enum GattWriteType {
     Invalid = 0,
     WriteNoRsp = 1,
     Write = 2,
     WritePrepare = 3,
+}
+
+impl Default for GattWriteType {
+    fn default() -> Self {
+        GattWriteType::Write
+    }
 }
 
 #[derive(Debug, FromPrimitive, ToPrimitive)]
@@ -354,7 +457,7 @@ impl Default for ScanType {
 }
 
 /// Represents RSSI configurations for hardware offloaded scanning.
-// TODO: This is still a placeholder struct, not yet complete.
+// TODO(b/200066804): This is still a placeholder struct, not yet complete.
 #[derive(Debug, Default)]
 pub struct RSSISettings {
     pub low_threshold: i32,
@@ -374,7 +477,7 @@ pub struct ScanSettings {
 #[derive(Debug, Default)]
 pub struct ScanFilter {}
 
-type Uuid128Bit = [u8; 16];
+pub type Uuid128Bit = [u8; 16];
 
 /// Implementation of the GATT API (IBluetoothGatt).
 pub struct BluetoothGatt {
@@ -410,7 +513,7 @@ impl BluetoothGatt {
             GattServerCallbacksDispatcher {
                 dispatch: Box::new(move |cb| {
                     // TODO(b/193685149): Implement the callbacks
-                    println!("received Gatt server callback: {:?}", cb);
+                    debug!("received Gatt server callback: {:?}", cb);
                 }),
             },
         );
@@ -450,19 +553,19 @@ pub enum GattWriteRequestStatus {
 
 impl IBluetoothGatt for BluetoothGatt {
     fn register_scanner(&self, _callback: Box<dyn IScannerCallback + Send>) {
-        // TODO: implement
+        // TODO(b/200066804): implement
     }
 
     fn unregister_scanner(&self, _scanner_id: i32) {
-        // TODO: implement
+        // TODO(b/200066804): implement
     }
 
     fn start_scan(&self, _scanner_id: i32, _settings: ScanSettings, _filters: Vec<ScanFilter>) {
-        // TODO: implement
+        // TODO(b/200066804): implement
     }
 
     fn stop_scan(&self, _scanner_id: i32) {
-        // TODO: implement
+        // TODO(b/200066804): implement
     }
 
     fn register_client(
@@ -585,7 +688,7 @@ impl IBluetoothGatt for BluetoothGatt {
             return;
         }
 
-        // TODO(b/193685325): Perform check on restricted handles.
+        // TODO(b/200065274): Perform check on restricted handles.
 
         self.gatt.as_ref().unwrap().client.read_characteristic(
             conn_id.unwrap(),
@@ -613,7 +716,7 @@ impl IBluetoothGatt for BluetoothGatt {
             return;
         }
 
-        // TODO(b/193685325): Perform check on restricted handles.
+        // TODO(b/200065274): Perform check on restricted handles.
 
         self.gatt.as_ref().unwrap().client.read_using_characteristic_uuid(
             conn_id.unwrap(),
@@ -642,9 +745,9 @@ impl IBluetoothGatt for BluetoothGatt {
             write_type = GattWriteType::WritePrepare;
         }
 
-        // TODO(b/193685325): Perform check on restricted handles.
+        // TODO(b/200065274): Perform check on restricted handles.
 
-        // TODO(b/193685325): Lock the thread until onCharacteristicWrite callback comes back?
+        // TODO(b/200070162): Handle concurrent write characteristic.
 
         self.gatt.as_ref().unwrap().client.write_characteristic(
             conn_id.unwrap(),
@@ -663,7 +766,7 @@ impl IBluetoothGatt for BluetoothGatt {
             return;
         }
 
-        // TODO(b/193685325): Perform check on restricted handles.
+        // TODO(b/200065274): Perform check on restricted handles.
 
         self.gatt.as_ref().unwrap().client.read_descriptor(
             conn_id.unwrap(),
@@ -685,7 +788,7 @@ impl IBluetoothGatt for BluetoothGatt {
             return;
         }
 
-        // TODO(b/193685325): Perform check on restricted handles.
+        // TODO(b/200065274): Perform check on restricted handles.
 
         self.gatt.as_ref().unwrap().client.write_descriptor(
             conn_id.unwrap(),
@@ -701,7 +804,7 @@ impl IBluetoothGatt for BluetoothGatt {
             return;
         }
 
-        // TODO(b/193685325): Perform check on restricted handles.
+        // TODO(b/200065274): Perform check on restricted handles.
 
         if enable {
             self.gatt.as_ref().unwrap().client.register_for_notification(
@@ -827,6 +930,9 @@ pub(crate) trait BtifGattClientCallbacks {
     #[btif_callback(Congestion)]
     fn congestion_cb(&mut self, conn_id: i32, congested: bool);
 
+    #[btif_callback(GetGattDb)]
+    fn get_gatt_db_cb(&mut self, conn_id: i32, elements: Vec<BtGattDbElement>, count: i32);
+
     #[btif_callback(PhyUpdated)]
     fn phy_updated_cb(&mut self, conn_id: i32, tx_phy: u8, rx_phy: u8, status: u8);
 
@@ -840,10 +946,11 @@ pub(crate) trait BtifGattClientCallbacks {
         status: u8,
     );
 
+    #[btif_callback(ServiceChanged)]
+    fn service_changed_cb(&self, conn_id: i32);
+
     #[btif_callback(ReadPhy)]
     fn read_phy_cb(&mut self, client_id: i32, addr: RawAddress, tx_phy: u8, rx_phy: u8, status: u8);
-
-    // TODO(b/193685325): Define all callbacks.
 }
 
 impl BtifGattClientCallbacks for BluetoothGatt {
@@ -852,7 +959,7 @@ impl BtifGattClientCallbacks for BluetoothGatt {
 
         let client = self.context_map.get_by_uuid(&app_uuid.uu);
         if client.is_none() {
-            println!("Warning: Client not registered for UUID {:?}", app_uuid.uu);
+            warn!("Warning: Client not registered for UUID {:?}", app_uuid.uu);
             return;
         }
 
@@ -952,7 +1059,8 @@ impl BtifGattClientCallbacks for BluetoothGatt {
             return;
         }
 
-        // TODO(b/193685325): Handle increasing permit.
+        // TODO(b/200070162): Design how to handle concurrent write characteristic to the same
+        // peer.
 
         let client = self.context_map.get_client_by_conn_id_mut(conn_id);
         if client.is_none() {
@@ -1068,6 +1176,84 @@ impl BtifGattClientCallbacks for BluetoothGatt {
         }
     }
 
+    fn get_gatt_db_cb(&mut self, conn_id: i32, elements: Vec<BtGattDbElement>, _count: i32) {
+        let address = self.context_map.get_address_by_conn_id(conn_id);
+        if address.is_none() {
+            return;
+        }
+
+        let client = self.context_map.get_client_by_conn_id(conn_id);
+        if client.is_none() {
+            return;
+        }
+
+        let mut db_out: Vec<BluetoothGattService> = vec![];
+
+        for elem in elements {
+            match GattDbElementType::from_u32(elem.type_).unwrap() {
+                GattDbElementType::PrimaryService | GattDbElementType::SecondaryService => {
+                    db_out.push(BluetoothGattService::new(
+                        elem.uuid.uu,
+                        elem.id as i32,
+                        elem.type_ as i32,
+                    ));
+                    // TODO(b/200065274): Mark restricted services.
+                }
+
+                GattDbElementType::Characteristic => {
+                    match db_out.last_mut() {
+                        Some(s) => s.characteristics.push(BluetoothGattCharacteristic::new(
+                            elem.uuid.uu,
+                            elem.id as i32,
+                            elem.properties as i32,
+                            0,
+                        )),
+                        None => {
+                            // TODO(b/193685325): Log error.
+                        }
+                    }
+                    // TODO(b/200065274): Mark restricted characteristics.
+                }
+
+                GattDbElementType::Descriptor => {
+                    match db_out.last_mut() {
+                        Some(s) => match s.characteristics.last_mut() {
+                            Some(c) => c.descriptors.push(BluetoothGattDescriptor::new(
+                                elem.uuid.uu,
+                                elem.id as i32,
+                                0,
+                            )),
+                            None => {
+                                // TODO(b/193685325): Log error.
+                            }
+                        },
+                        None => {
+                            // TODO(b/193685325): Log error.
+                        }
+                    }
+                    // TODO(b/200065274): Mark restricted descriptors.
+                }
+
+                GattDbElementType::IncludedService => {
+                    match db_out.last_mut() {
+                        Some(s) => {
+                            s.included_services.push(BluetoothGattService::new(
+                                elem.uuid.uu,
+                                elem.id as i32,
+                                elem.type_ as i32,
+                            ));
+                        }
+                        None => {
+                            // TODO(b/193685325): Log error.
+                        }
+                    }
+                }
+            }
+        }
+
+        client.unwrap().callback.on_search_complete(address.unwrap().to_string(), db_out, 0);
+    }
+
     fn phy_updated_cb(&mut self, conn_id: i32, tx_phy: u8, rx_phy: u8, status: u8) {
         let client = self.context_map.get_client_by_conn_id(conn_id);
         if client.is_none() {
@@ -1134,6 +1320,20 @@ impl BtifGattClientCallbacks for BluetoothGatt {
             status as i32,
         );
     }
+
+    fn service_changed_cb(&self, conn_id: i32) {
+        let address = self.context_map.get_address_by_conn_id(conn_id);
+        if address.is_none() {
+            return;
+        }
+
+        let client = self.context_map.get_client_by_conn_id(conn_id);
+        if client.is_none() {
+            return;
+        }
+
+        client.unwrap().callback.on_service_changed(address.unwrap());
+    }
 }
 
 #[cfg(test)]
@@ -1158,6 +1358,60 @@ mod tests {
             _addr: String,
         ) {
         }
+
+        fn on_phy_update(
+            &self,
+            _addr: String,
+            _tx_phy: LePhy,
+            _rx_phy: LePhy,
+            _status: GattStatus,
+        ) {
+        }
+
+        fn on_phy_read(&self, _addr: String, _tx_phy: LePhy, _rx_phy: LePhy, _status: GattStatus) {}
+
+        fn on_search_complete(
+            &self,
+            _addr: String,
+            _services: Vec<BluetoothGattService>,
+            _status: i32,
+        ) {
+        }
+
+        fn on_characteristic_read(
+            &self,
+            _addr: String,
+            _status: i32,
+            _handle: i32,
+            _value: Vec<u8>,
+        ) {
+        }
+
+        fn on_characteristic_write(&self, _addr: String, _status: i32, _handle: i32) {}
+
+        fn on_execute_write(&self, _addr: String, _status: i32) {}
+
+        fn on_descriptor_read(&self, _addr: String, _status: i32, _handle: i32, _value: Vec<u8>) {}
+
+        fn on_descriptor_write(&self, _addr: String, _status: i32, _handle: i32) {}
+
+        fn on_notify(&self, _addr: String, _handle: i32, _value: Vec<u8>) {}
+
+        fn on_read_remote_rssi(&self, _addr: String, _rssi: i32, _status: i32) {}
+
+        fn on_configure_mtu(&self, _addr: String, _mtu: i32, _status: i32) {}
+
+        fn on_connection_updated(
+            &self,
+            _addr: String,
+            _interval: i32,
+            _latency: i32,
+            _timeout: i32,
+            _status: i32,
+        ) {
+        }
+
+        fn on_service_changed(&self, _addr: String) {}
     }
 
     impl RPCProxy for TestBluetoothGattCallback {

@@ -26,9 +26,9 @@
 
 #include "avct_api.h"
 #include "avct_defs.h"
-#include "bt_common.h"
 #include "l2c_api.h"
 #include "osi/include/fixed_queue.h"
+#include "stack/include/bt_hdr.h"
 
 /*****************************************************************************
  * constants

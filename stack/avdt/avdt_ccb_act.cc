@@ -24,17 +24,17 @@
  ******************************************************************************/
 
 #include <string.h>
+
 #include "avdt_api.h"
 #include "avdt_int.h"
 #include "avdtc_api.h"
-#include "bt_common.h"
 #include "bt_target.h"
-#include "bt_types.h"
 #include "bt_utils.h"
 #include "btm_api.h"
-#include "btu.h"
+#include "osi/include/allocator.h"
 #include "osi/include/osi.h"
 #include "stack/btm/btm_sec.h"
+#include "stack/include/bt_hdr.h"
 
 /*******************************************************************************
  *

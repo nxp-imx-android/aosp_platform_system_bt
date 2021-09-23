@@ -41,9 +41,8 @@ class LinkLayerController {
   ErrorCode SendCommandToRemoteByAddress(
       OpCode opcode, bluetooth::packet::PacketView<true> args,
       const Address& remote);
-  ErrorCode SendLeCommandToRemoteByAddress(
-      OpCode opcode, bluetooth::packet::PacketView<true> args,
-      const Address& remote, const Address& local);
+  ErrorCode SendLeCommandToRemoteByAddress(OpCode opcode, const Address& remote,
+                                           const Address& local);
   ErrorCode SendCommandToRemoteByHandle(
       OpCode opcode, bluetooth::packet::PacketView<true> args, uint16_t handle);
   ErrorCode SendScoToRemote(bluetooth::hci::ScoView sco_packet);
@@ -146,6 +145,9 @@ class LinkLayerController {
 
   ErrorCode SetLeExtendedAdvertisingData(uint8_t handle,
                                          const std::vector<uint8_t>& data);
+
+  ErrorCode SetLeExtendedScanResponseData(uint8_t handle,
+                                          const std::vector<uint8_t>& data);
 
   ErrorCode SetLeExtendedAdvertisingParameters(
       uint8_t set, uint16_t interval_min, uint16_t interval_max,
@@ -447,7 +449,7 @@ class LinkLayerController {
                          std::array<uint8_t, kIrk_size>>>
       le_resolving_list_;
 
-  std::array<LeAdvertiser, 3> advertisers_;
+  std::array<LeAdvertiser, 7> advertisers_;
 
   bluetooth::hci::OpCode le_scan_enable_{bluetooth::hci::OpCode::NONE};
   uint8_t le_scan_type_{};

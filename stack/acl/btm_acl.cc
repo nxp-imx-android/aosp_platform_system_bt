@@ -47,6 +47,7 @@
 #include "main/shim/dumpsys.h"
 #include "main/shim/l2c_api.h"
 #include "main/shim/shim.h"
+#include "osi/include/allocator.h"
 #include "osi/include/log.h"
 #include "osi/include/osi.h"  // UNUSED_ATTR
 #include "stack/acl/acl.h"
@@ -58,11 +59,11 @@
 #include "stack/gatt/connection_manager.h"
 #include "stack/include/acl_api.h"
 #include "stack/include/acl_hci_link_interface.h"
+#include "stack/include/bt_hdr.h"
 #include "stack/include/btm_api.h"
 #include "stack/include/btm_iso_api.h"
 #include "stack/include/btu.h"
 #include "stack/include/hci_error_code.h"
-#include "stack/include/hcimsgs.h"
 #include "stack/include/l2cap_acl_interface.h"
 #include "stack/include/sco_hci_link_interface.h"
 #include "types/hci_role.h"
@@ -720,6 +721,16 @@ void BTM_unblock_role_switch_for(const RawAddress& peer_addr) {
 
 void BTM_block_role_switch_for(const RawAddress& peer_addr) {
   btm_toggle_policy_off_for(peer_addr, HCI_ENABLE_CENTRAL_PERIPHERAL_SWITCH);
+}
+
+void BTM_unblock_role_switch_and_sniff_mode_for(const RawAddress& peer_addr) {
+  btm_toggle_policy_on_for(
+      peer_addr, HCI_ENABLE_SNIFF_MODE | HCI_ENABLE_CENTRAL_PERIPHERAL_SWITCH);
+}
+
+void BTM_block_role_switch_and_sniff_mode_for(const RawAddress& peer_addr) {
+  btm_toggle_policy_off_for(
+      peer_addr, HCI_ENABLE_SNIFF_MODE | HCI_ENABLE_CENTRAL_PERIPHERAL_SWITCH);
 }
 
 void StackAclBtmAcl::btm_set_default_link_policy(tLINK_POLICY settings) {
@@ -2950,6 +2961,7 @@ void HACK_acl_check_sm4(tBTM_SEC_DEV_REC& record) {
   if (p_acl == nullptr) {
     LOG_WARN("Unable to find active acl for authentication device:%s",
              PRIVATE_ADDRESS(record.RemoteAddress()));
+    return;
   }
 
   // If we have not received the SSP feature record

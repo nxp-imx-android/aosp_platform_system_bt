@@ -29,6 +29,7 @@
 
 #include "bta/dm/bta_dm_int.h"
 #include "osi/include/allocator.h"
+#include "osi/include/compat.h"
 #include "stack/btm/btm_sec.h"
 #include "stack/include/btm_api.h"
 #include "stack/include/btu.h"  // do_in_main_thread
@@ -520,12 +521,8 @@ void BTA_DmBleUpdateConnectionParams(const RawAddress& bd_addr,
  *
  ******************************************************************************/
 void BTA_DmBleConfigLocalPrivacy(bool privacy_enable) {
-#if (BLE_PRIVACY_SPT == TRUE)
   do_in_main_thread(
       FROM_HERE, base::Bind(bta_dm_ble_config_local_privacy, privacy_enable));
-#else
-  UNUSED(privacy_enable);
-#endif
 }
 
 /*******************************************************************************

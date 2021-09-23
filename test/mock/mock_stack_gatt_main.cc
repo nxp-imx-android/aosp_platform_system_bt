@@ -24,7 +24,6 @@
 
 extern std::map<std::string, int> mock_function_count_map;
 
-#include "bt_common.h"
 #include "bt_target.h"
 #include "device/include/interop.h"
 #include "l2c_api.h"
@@ -33,6 +32,7 @@ extern std::map<std::string, int> mock_function_count_map;
 #include "stack/btm/btm_dev.h"
 #include "stack/btm/btm_sec.h"
 #include "stack/gatt/gatt_int.h"
+#include "stack/include/bt_hdr.h"
 #include "stack/include/l2cap_acl_interface.h"
 
 #ifndef UNUSED_ATTR

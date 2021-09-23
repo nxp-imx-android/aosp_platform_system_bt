@@ -24,16 +24,18 @@
 
 #define LOG_TAG "bluetooth"
 
-#include "bt_target.h"
-
 #include <string.h>
+
+#include "bt_target.h"
 #include "btm_ble_api.h"
 #include "common/metrics.h"
 #include "l2c_api.h"
 #include "main/shim/dumpsys.h"
+#include "osi/include/allocator.h"
 #include "osi/include/log.h"
 #include "osi/include/osi.h"  // UNUSED_ATTR
 #include "smp_int.h"
+#include "stack/include/bt_hdr.h"
 
 static void smp_connect_callback(uint16_t channel, const RawAddress& bd_addr,
                                  bool connected, uint16_t reason,

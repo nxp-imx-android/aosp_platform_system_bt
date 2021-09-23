@@ -22,22 +22,20 @@
  *
  ******************************************************************************/
 
+#include "stack/btm/btm_dev.h"
+
 #include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
-#include "bt_common.h"
-#include "bt_types.h"
 #include "btm_api.h"
-#include "btu.h"
 #include "device/include/controller.h"
-#include "hcidefs.h"
-#include "hcimsgs.h"
 #include "l2c_api.h"
 #include "main/shim/btm_api.h"
 #include "main/shim/shim.h"
-#include "stack/btm/btm_dev.h"
+#include "osi/include/allocator.h"
+#include "osi/include/compat.h"
 #include "stack/include/acl_api.h"
 
 extern tBTM_CB btm_cb;

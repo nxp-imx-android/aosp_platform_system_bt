@@ -28,7 +28,6 @@
 #include <hardware/bluetooth.h>
 #include <hardware/bt_gatt.h>
 
-#include "bt_common.h"
 #include "bta_api.h"
 #include "bta_gatt_api.h"
 #include "bta_jv_api.h"
@@ -38,6 +37,7 @@
 #include "btif_gatt.h"
 #include "btif_storage.h"
 #include "btif_util.h"
+#include "osi/include/allocator.h"
 #include "osi/include/osi.h"
 #include "stack/btm/btm_sec.h"
 #include "types/bt_transport.h"

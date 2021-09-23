@@ -26,7 +26,7 @@
 extern std::map<std::string, int> mock_function_count_map;
 
 #include "bta/include/bta_hearing_aid_api.h"
-#include "stack/include/bt_types.h"
+#include "stack/include/bt_octets.h"
 #include "types/ble_address_with_type.h"
 #include "types/raw_address.h"
 
@@ -221,4 +221,24 @@ void btif_storage_set_gatt_sr_supp_feat(const RawAddress& addr, uint8_t feat) {
 uint8_t btif_storage_get_sr_supp_feat(const RawAddress& bd_addr) {
   mock_function_count_map[__func__]++;
   return 0;
+}
+void btif_storage_add_groups(RawAddress const&) {
+  mock_function_count_map[__func__]++;
+}
+void btif_storage_remove_groups(RawAddress const&) {
+  mock_function_count_map[__func__]++;
+}
+void btif_storage_load_bonded_groups() { mock_function_count_map[__func__]++; }
+void btif_storage_set_csis_autoconnect(const RawAddress& addr,
+                                       bool autoconnect) {
+  mock_function_count_map[__func__]++;
+}
+void btif_storage_update_csis_info(const RawAddress& addr) {
+  mock_function_count_map[__func__]++;
+}
+void btif_storage_load_bonded_csis_devices() {
+  mock_function_count_map[__func__]++;
+}
+void btif_storage_remove_csis_device(const RawAddress& address) {
+  mock_function_count_map[__func__]++;
 }

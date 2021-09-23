@@ -25,6 +25,8 @@
 
 extern std::map<std::string, int> mock_function_count_map;
 
+#include "device/include/esco_parameters.h"
+#include "stack/include/bt_hdr.h"
 #include "stack/include/btm_api_types.h"
 #include "stack/include/btm_status.h"
 #include "stack/include/hci_error_code.h"
@@ -50,11 +52,6 @@ bool btm_sco_removed(uint16_t hci_handle, tHCI_REASON reason) {
 const RawAddress* BTM_ReadScoBdAddr(uint16_t sco_inx) {
   mock_function_count_map[__func__]++;
   return nullptr;
-}
-tBTM_STATUS BTM_ChangeEScoLinkParms(uint16_t sco_inx,
-                                    tBTM_CHG_ESCO_PARAMS* p_parms) {
-  mock_function_count_map[__func__]++;
-  return BTM_SUCCESS;
 }
 tBTM_STATUS BTM_CreateSco(const RawAddress* remote_bda, bool is_orig,
                           uint16_t pkt_types, uint16_t* p_sco_inx,
@@ -84,11 +81,6 @@ void BTM_EScoConnRsp(uint16_t sco_inx, uint8_t hci_status,
   mock_function_count_map[__func__]++;
 }
 void BTM_RemoveSco(const RawAddress& bda) {
-  mock_function_count_map[__func__]++;
-}
-void btm_esco_proc_conn_chg(uint8_t status, uint16_t handle,
-                            uint8_t tx_interval, uint8_t retrans_window,
-                            uint16_t rx_pkt_len, uint16_t tx_pkt_len) {
   mock_function_count_map[__func__]++;
 }
 void btm_route_sco_data(BT_HDR* p_msg) { mock_function_count_map[__func__]++; }

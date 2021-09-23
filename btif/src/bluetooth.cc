@@ -30,6 +30,7 @@
 #include <hardware/bluetooth.h>
 #include <hardware/bluetooth_headset_interface.h>
 #include <hardware/bt_av.h>
+#include <hardware/bt_csis.h>
 #include <hardware/bt_gatt.h>
 #include <hardware/bt_hd.h>
 #include <hardware/bt_hearing_aid.h>
@@ -64,8 +65,6 @@
 #include "btif_keystore.h"
 #include "btif_metrics_logging.h"
 #include "btif_storage.h"
-#include "btsnoop.h"
-#include "btsnoop_mem.h"
 #include "common/address_obfuscator.h"
 #include "common/metric_id_allocator.h"
 #include "common/metrics.h"
@@ -76,6 +75,7 @@
 #include "main/shim/shim.h"
 #include "osi/include/alarm.h"
 #include "osi/include/allocation_tracker.h"
+#include "osi/include/allocator.h"
 #include "osi/include/log.h"
 #include "osi/include/osi.h"
 #include "osi/include/wakelock.h"
@@ -84,6 +84,7 @@
 #include "stack/include/btm_api.h"
 #include "stack/include/btu.h"
 
+using bluetooth::csis::CsisClientInterface;
 using bluetooth::hearing_aid::HearingAidInterface;
 using bluetooth::le_audio::LeAudioClientInterface;
 using bluetooth::vc::VolumeControlInterface;
@@ -130,6 +131,8 @@ extern const btsdp_interface_t* btif_sdp_get_interface();
 extern HearingAidInterface* btif_hearing_aid_get_interface();
 /* LeAudio testi client */
 extern LeAudioClientInterface* btif_le_audio_get_interface();
+/* Coordinated Set Service Client */
+extern CsisClientInterface* btif_csis_client_get_interface();
 /* Volume Control client */
 extern VolumeControlInterface* btif_volume_control_get_interface();
 
@@ -471,6 +474,9 @@ static const void* get_profile_interface(const char* profile_id) {
   if (is_profile(profile_id, BT_PROFILE_VC_ID))
     return btif_volume_control_get_interface();
 
+  if (is_profile(profile_id, BT_PROFILE_CSIS_CLIENT_ID))
+    return btif_csis_client_get_interface();
+
   return NULL;
 }
 
@@ -785,28 +791,29 @@ void invoke_oob_data_request_cb(tBT_TRANSPORT t, bool valid, Octet16 c,
 }
 
 void invoke_bond_state_changed_cb(bt_status_t status, RawAddress bd_addr,
-                                  bt_bond_state_t state) {
-  do_in_jni_thread(
-      FROM_HERE,
-      base::BindOnce(
-          [](bt_status_t status, RawAddress bd_addr, bt_bond_state_t state) {
-            HAL_CBACK(bt_hal_cbacks, bond_state_changed_cb, status, &bd_addr,
-                      state);
-          },
-          status, bd_addr, state));
+                                  bt_bond_state_t state, int fail_reason) {
+  do_in_jni_thread(FROM_HERE, base::BindOnce(
+                                  [](bt_status_t status, RawAddress bd_addr,
+                                     bt_bond_state_t state, int fail_reason) {
+                                    HAL_CBACK(bt_hal_cbacks,
+                                              bond_state_changed_cb, status,
+                                              &bd_addr, state, fail_reason);
+                                  },
+                                  status, bd_addr, state, fail_reason));
 }
 
 void invoke_acl_state_changed_cb(bt_status_t status, RawAddress bd_addr,
-                                 bt_acl_state_t state, bt_hci_error_code_t hci_reason) {
+                                 bt_acl_state_t state, int transport_link_type,
+                                 bt_hci_error_code_t hci_reason) {
   do_in_jni_thread(
       FROM_HERE,
       base::BindOnce(
           [](bt_status_t status, RawAddress bd_addr, bt_acl_state_t state,
-             bt_hci_error_code_t hci_reason) {
+             int transport_link_type, bt_hci_error_code_t hci_reason) {
             HAL_CBACK(bt_hal_cbacks, acl_state_changed_cb, status, &bd_addr,
-                      state, hci_reason);
+                      state, transport_link_type, hci_reason);
           },
-          status, bd_addr, state, hci_reason));
+          status, bd_addr, state, transport_link_type, hci_reason));
 }
 
 void invoke_thread_evt_cb(bt_cb_thread_evt event) {

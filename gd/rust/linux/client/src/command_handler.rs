@@ -1,70 +1,20 @@
-use bt_topshim::btif::BtSspVariant;
-
-use btstack::bluetooth::{BluetoothDevice, BluetoothTransport, IBluetooth, IBluetoothCallback};
-use btstack::RPCProxy;
-
-use manager_service::iface_bluetooth_manager::IBluetoothManager;
-
-use num_traits::cast::FromPrimitive;
-
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 
-use crate::console_yellow;
-use crate::print_info;
-use crate::{BluetoothDBus, BluetoothManagerDBus};
+use num_traits::cast::FromPrimitive;
+
+use crate::callbacks::BtGattCallback;
+use crate::ClientContext;
+use crate::{console_red, console_yellow, print_error, print_info};
+use btstack::bluetooth::{BluetoothDevice, BluetoothTransport, IBluetooth};
+use btstack::bluetooth_gatt::IBluetoothGatt;
+use manager_service::iface_bluetooth_manager::IBluetoothManager;
 
 const INDENT_CHAR: &str = " ";
 const BAR1_CHAR: &str = "=";
 const BAR2_CHAR: &str = "-";
 const MAX_MENU_CHAR_WIDTH: usize = 72;
-
-struct BtCallback {
-    objpath: String,
-}
-
-impl IBluetoothCallback for BtCallback {
-    fn on_address_changed(&self, addr: String) {
-        print_info!("Address changed to {}", addr);
-    }
-
-    fn on_device_found(&self, remote_device: BluetoothDevice) {
-        print_info!("Found device: {:?}", remote_device);
-    }
-
-    fn on_discovering_changed(&self, discovering: bool) {
-        print_info!("Discovering: {}", discovering);
-    }
-
-    fn on_ssp_request(
-        &self,
-        remote_device: BluetoothDevice,
-        _cod: u32,
-        variant: BtSspVariant,
-        passkey: u32,
-    ) {
-        if variant == BtSspVariant::PasskeyNotification {
-            print_info!(
-                "device {}{} would like to pair, enter passkey on remote device: {:06}",
-                remote_device.address.to_string(),
-                if remote_device.name.len() > 0 {
-                    format!(" ({})", remote_device.name)
-                } else {
-                    String::from("")
-                },
-                passkey
-            );
-        }
-    }
-}
-
-impl RPCProxy for BtCallback {
-    fn register_disconnect(&mut self, _f: Box<dyn Fn() + Send>) {}
-
-    fn get_object_id(&self) -> String {
-        self.objpath.clone()
-    }
-}
+const GATT_CLIENT_APP_UUID: &str = "12345678123456781234567812345678";
 
 type CommandFunction = fn(&mut CommandHandler, &Vec<String>);
 
@@ -80,11 +30,7 @@ pub struct CommandOption {
 
 /// Handles string command entered from command line.
 pub(crate) struct CommandHandler {
-    bluetooth_manager: Arc<Mutex<Box<BluetoothManagerDBus>>>,
-    bluetooth: Arc<Mutex<Box<BluetoothDBus>>>,
-
-    is_bluetooth_callback_registered: bool,
-
+    context: Arc<Mutex<ClientContext>>,
     command_options: HashMap<String, CommandOption>,
 }
 
@@ -124,22 +70,10 @@ fn build_commands() -> HashMap<String, CommandOption> {
     command_options.insert(
         String::from("adapter"),
         CommandOption {
-            description: String::from("Enable/Disable Bluetooth adapter. (e.g. adapter enable)"),
+            description: String::from(
+                "Enable/Disable/Show default bluetooth adapter. (e.g. adapter enable)",
+            ),
             function_pointer: CommandHandler::cmd_adapter,
-        },
-    );
-    command_options.insert(
-        String::from("get_address"),
-        CommandOption {
-            description: String::from("Gets the local device address."),
-            function_pointer: CommandHandler::cmd_get_address,
-        },
-    );
-    command_options.insert(
-        String::from("discovery"),
-        CommandOption {
-            description: String::from("Start and stop device discovery. (e.g. discovery start)"),
-            function_pointer: CommandHandler::cmd_discovery,
         },
     );
     command_options.insert(
@@ -150,10 +84,40 @@ fn build_commands() -> HashMap<String, CommandOption> {
         },
     );
     command_options.insert(
+        String::from("discovery"),
+        CommandOption {
+            description: String::from("Start and stop device discovery. (e.g. discovery start)"),
+            function_pointer: CommandHandler::cmd_discovery,
+        },
+    );
+    command_options.insert(
+        String::from("gatt"),
+        CommandOption {
+            description: String::from("GATT tools"),
+            function_pointer: CommandHandler::cmd_gatt,
+        },
+    );
+    command_options.insert(
+        String::from("get-address"),
+        CommandOption {
+            description: String::from("Gets the local device address."),
+            function_pointer: CommandHandler::cmd_get_address,
+        },
+    );
+    command_options.insert(
         String::from("help"),
         CommandOption {
             description: String::from("Shows this menu."),
             function_pointer: CommandHandler::cmd_help,
+        },
+    );
+    command_options.insert(
+        String::from("list"),
+        CommandOption {
+            description: String::from(
+                "List bonded or found remote devices. Use: list <bonded|found>",
+            ),
+            function_pointer: CommandHandler::cmd_list_devices,
         },
     );
     command_options.insert(
@@ -168,16 +132,8 @@ fn build_commands() -> HashMap<String, CommandOption> {
 
 impl CommandHandler {
     /// Creates a new CommandHandler.
-    pub fn new(
-        bluetooth_manager: Arc<Mutex<Box<BluetoothManagerDBus>>>,
-        bluetooth: Arc<Mutex<Box<BluetoothDBus>>>,
-    ) -> CommandHandler {
-        CommandHandler {
-            bluetooth_manager,
-            bluetooth,
-            is_bluetooth_callback_registered: false,
-            command_options: build_commands(),
-        }
+    pub fn new(context: Arc<Mutex<ClientContext>>) -> CommandHandler {
+        CommandHandler { context, command_options: build_commands() }
     }
 
     /// Entry point for command and arguments
@@ -193,6 +149,15 @@ impl CommandHandler {
                 }
             },
         };
+    }
+
+    //  Common message for when the adapter isn't ready
+    fn adapter_not_ready(&self) {
+        let adapter_idx = self.context.lock().unwrap().default_adapter;
+        print_error!(
+            "Default adapter {} is not enabled. Enable the adapter before using this command.",
+            adapter_idx
+        );
     }
 
     fn cmd_help(&mut self, args: &Vec<String>) {
@@ -245,12 +210,22 @@ impl CommandHandler {
     }
 
     fn cmd_adapter(&mut self, args: &Vec<String>) {
-        enforce_arg_len(args, 1, "adapter <enable|disable>", || match &args[0][0..] {
+        let default_adapter = self.context.lock().unwrap().default_adapter;
+        enforce_arg_len(args, 1, "adapter <enable|disable|show>", || match &args[0][0..] {
             "enable" => {
-                self.bluetooth_manager.lock().unwrap().start(0);
+                self.context.lock().unwrap().manager_dbus.start(default_adapter);
             }
             "disable" => {
-                self.bluetooth_manager.lock().unwrap().stop(0);
+                self.context.lock().unwrap().manager_dbus.stop(default_adapter);
+            }
+            "show" => {
+                let enabled = self.context.lock().unwrap().enabled;
+                let address = match self.context.lock().unwrap().adapter_address.as_ref() {
+                    Some(x) => x.clone(),
+                    None => String::from(""),
+                };
+                print_info!("State: {}", if enabled { "enabled" } else { "disabled" });
+                print_info!("Address: {}", address);
             }
             _ => {
                 println!("Invalid argument '{}'", args[0]);
@@ -259,51 +234,179 @@ impl CommandHandler {
     }
 
     fn cmd_get_address(&mut self, _args: &Vec<String>) {
-        let addr = self.bluetooth.lock().unwrap().get_address();
-        print_info!("Local address = {}", addr);
+        if !self.context.lock().unwrap().adapter_ready {
+            self.adapter_not_ready();
+            return;
+        }
+
+        let address = self.context.lock().unwrap().update_adapter_address();
+        print_info!("Local address = {}", &address);
     }
 
     fn cmd_discovery(&mut self, args: &Vec<String>) {
-        enforce_arg_len(args, 1, "discovery <start|stop>", || {
-            match &args[0][0..] {
-                "start" => {
-                    // TODO: Register the BtCallback when getting a OnStateChangedCallback from btmanagerd.
-                    if !self.is_bluetooth_callback_registered {
-                        self.bluetooth.lock().unwrap().register_callback(Box::new(BtCallback {
-                            objpath: String::from(
-                                "/org/chromium/bluetooth/client/bluetooth_callback",
-                            ),
-                        }));
-                        self.is_bluetooth_callback_registered = true;
-                    }
-                    self.bluetooth.lock().unwrap().start_discovery();
-                }
-                "stop" => {
-                    self.bluetooth.lock().unwrap().cancel_discovery();
-                }
-                _ => {
-                    println!("Invalid argument '{}'", args[0]);
-                }
+        if !self.context.lock().unwrap().adapter_ready {
+            self.adapter_not_ready();
+            return;
+        }
+
+        enforce_arg_len(args, 1, "discovery <start|stop>", || match &args[0][0..] {
+            "start" => {
+                self.context.lock().unwrap().adapter_dbus.as_ref().unwrap().start_discovery();
+            }
+            "stop" => {
+                self.context.lock().unwrap().adapter_dbus.as_ref().unwrap().cancel_discovery();
+            }
+            _ => {
+                println!("Invalid argument '{}'", args[0]);
             }
         });
     }
 
     fn cmd_bond(&mut self, args: &Vec<String>) {
+        if !self.context.lock().unwrap().adapter_ready {
+            self.adapter_not_ready();
+            return;
+        }
+
         enforce_arg_len(args, 1, "bond <address>", || {
             let device = BluetoothDevice {
                 address: String::from(&args[0]),
                 name: String::from("Classic Device"),
             };
-            self.bluetooth
+
+            self.context
                 .lock()
                 .unwrap()
+                .adapter_dbus
+                .as_ref()
+                .unwrap()
                 .create_bond(device, BluetoothTransport::from_i32(0).unwrap());
+        });
+    }
+
+    fn cmd_gatt(&mut self, args: &Vec<String>) {
+        if !self.context.lock().unwrap().adapter_ready {
+            self.adapter_not_ready();
+            return;
+        }
+
+        enforce_arg_len(args, 1, "gatt <commands>", || match &args[0][0..] {
+            "register-client" => {
+                self.context.lock().unwrap().gatt_dbus.as_mut().unwrap().register_client(
+                    String::from(GATT_CLIENT_APP_UUID),
+                    Box::new(BtGattCallback::new(
+                        String::from("/org/chromium/bluetooth/client/bluetooth_gatt_callback"),
+                        self.context.clone(),
+                    )),
+                    false,
+                );
+            }
+            "client-connect" => {
+                if args.len() < 2 {
+                    println!("usage: gatt client-connect <addr>");
+                    return;
+                }
+
+                let client_id = self.context.lock().unwrap().gatt_client_id;
+                if client_id.is_none() {
+                    println!("GATT client is not yet registered.");
+                    return;
+                }
+
+                let addr = String::from(&args[1]);
+                self.context.lock().unwrap().gatt_dbus.as_ref().unwrap().client_connect(
+                    client_id.unwrap(),
+                    addr,
+                    false,
+                    2,
+                    false,
+                    1,
+                );
+            }
+            "client-read-phy" => {
+                if args.len() < 2 {
+                    println!("usage: gatt client-read-phy <addr>");
+                    return;
+                }
+
+                let client_id = self.context.lock().unwrap().gatt_client_id;
+                if client_id.is_none() {
+                    println!("GATT client is not yet registered.");
+                    return;
+                }
+
+                let addr = String::from(&args[1]);
+                self.context
+                    .lock()
+                    .unwrap()
+                    .gatt_dbus
+                    .as_mut()
+                    .unwrap()
+                    .client_read_phy(client_id.unwrap(), addr);
+            }
+            "client-discover-services" => {
+                if args.len() < 2 {
+                    println!("usage: gatt client-discover-services <addr>");
+                    return;
+                }
+
+                let client_id = self.context.lock().unwrap().gatt_client_id;
+                if client_id.is_none() {
+                    println!("GATT client is not yet registered.");
+                    return;
+                }
+
+                let addr = String::from(&args[1]);
+                self.context
+                    .lock()
+                    .unwrap()
+                    .gatt_dbus
+                    .as_ref()
+                    .unwrap()
+                    .discover_services(client_id.unwrap(), addr);
+            }
+            _ => {
+                println!("Invalid argument '{}'", args[0]);
+            }
         });
     }
 
     /// Get the list of currently supported commands
     pub fn get_command_list(&self) -> Vec<String> {
         self.command_options.keys().map(|key| String::from(key)).collect::<Vec<String>>()
+    }
+
+    fn cmd_list_devices(&mut self, args: &Vec<String>) {
+        if !self.context.lock().unwrap().adapter_ready {
+            self.adapter_not_ready();
+            return;
+        }
+
+        enforce_arg_len(args, 1, "list <bonded|found>", || match &args[0][0..] {
+            "bonded" => {
+                print_info!("Known bonded devices:");
+                let devices = self
+                    .context
+                    .lock()
+                    .unwrap()
+                    .adapter_dbus
+                    .as_ref()
+                    .unwrap()
+                    .get_bonded_devices();
+                for device in devices.iter() {
+                    print_info!("[{:17}] {}", device.address, device.name);
+                }
+            }
+            "found" => {
+                print_info!("Devices found in most recent discovery session:");
+                for (key, val) in self.context.lock().unwrap().found_devices.iter() {
+                    print_info!("[{:17}] {}", key, val.name);
+                }
+            }
+            _ => {
+                println!("Invalid argument '{}'", args[0]);
+            }
+        });
     }
 }
 

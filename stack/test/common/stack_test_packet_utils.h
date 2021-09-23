@@ -17,7 +17,8 @@
  ******************************************************************************/
 #pragma once
 
-#include "bt_types.h"
+#include <vector>
+#include "stack/include/bt_hdr.h"
 
 namespace bluetooth {
 

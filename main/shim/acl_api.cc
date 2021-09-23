@@ -14,15 +14,18 @@
  * limitations under the License.
  */
 
+#include "main/shim/acl_api.h"
+
 #include <cstddef>
 #include <cstdint>
 #include <future>
 
 #include "gd/hci/acl_manager.h"
-#include "main/shim/acl_api.h"
 #include "main/shim/dumpsys.h"
 #include "main/shim/helpers.h"
 #include "main/shim/stack.h"
+#include "osi/include/allocator.h"
+#include "stack/include/bt_hdr.h"
 #include "types/ble_address_with_type.h"
 #include "types/raw_address.h"
 

@@ -27,12 +27,12 @@
 #define LOG_TAG "bt_bta_av"
 
 #include <base/strings/stringprintf.h>
+
 #include <cstdint>
 #include <cstring>
 #include <vector>
 
 #include "bt_target.h"  // Must be first to define build configuration
-
 #include "bta/av/bta_av_int.h"
 #include "bta/include/bta_ar_api.h"
 #include "bta/include/bta_av_co.h"
@@ -42,11 +42,13 @@
 #include "btif/include/btif_storage.h"
 #include "device/include/interop.h"
 #include "main/shim/dumpsys.h"
+#include "osi/include/allocator.h"
 #include "osi/include/log.h"
 #include "osi/include/osi.h"
 #include "osi/include/properties.h"
 #include "stack/include/a2dp_sbc.h"
 #include "stack/include/acl_api.h"
+#include "stack/include/bt_hdr.h"
 #include "stack/include/btm_api.h"
 #include "stack/include/btm_client_interface.h"
 #include "stack/include/l2c_api.h"
@@ -1811,16 +1813,6 @@ void bta_av_do_start(tBTA_AV_SCB* p_scb, tBTA_AV_DATA* p_data) {
     return;
   }
 
-  /* disallow role switch during streaming, only if we are the central role
-   * i.e. allow role switch, if we are peripheral.
-   * It would not hurt us, if the peer device wants us to be central */
-  tHCI_ROLE cur_role;
-  if ((BTM_GetRole(p_scb->PeerAddress(), &cur_role) == BTM_SUCCESS) &&
-      (cur_role == HCI_ROLE_CENTRAL)) {
-    BTM_block_role_switch_for(p_scb->PeerAddress());
-  }
-  BTM_block_sniff_mode_for(p_scb->PeerAddress());
-
   if (p_scb->started) {
     p_scb->role |= BTA_AV_ROLE_START_INT;
     if (p_scb->wait != 0) {
@@ -1852,6 +1844,18 @@ void bta_av_do_start(tBTA_AV_SCB* p_scb, tBTA_AV_DATA* p_data) {
 
   p_scb->role |= BTA_AV_ROLE_START_INT;
   bta_sys_busy(BTA_ID_AV, bta_av_cb.audio_open_cnt, p_scb->PeerAddress());
+  /* disallow role switch during streaming, only if we are the central role
+   * i.e. allow role switch, if we are peripheral.
+   * It would not hurt us, if the peer device wants us to be central
+   * disable sniff mode unconditionally during streaming */
+  tHCI_ROLE cur_role;
+  if ((BTM_GetRole(p_scb->PeerAddress(), &cur_role) == BTM_SUCCESS) &&
+      (cur_role == HCI_ROLE_CENTRAL)) {
+    BTM_block_role_switch_and_sniff_mode_for(p_scb->PeerAddress());
+  } else {
+    BTM_block_sniff_mode_for(p_scb->PeerAddress());
+  }
+
   uint16_t result = AVDT_StartReq(&p_scb->avdt_handle, 1);
   if (result != AVDT_SUCCESS) {
     LOG_ERROR("%s: AVDT_StartReq failed for peer %s result:%d", __func__,
@@ -1887,8 +1891,7 @@ void bta_av_str_stopped(tBTA_AV_SCB* p_scb, tBTA_AV_DATA* p_data) {
       bta_av_cb.audio_open_cnt, p_data, start);
 
   bta_sys_idle(BTA_ID_AV, bta_av_cb.audio_open_cnt, p_scb->PeerAddress());
-  BTM_unblock_role_switch_for(p_scb->PeerAddress());
-  BTM_unblock_sniff_mode_for(p_scb->PeerAddress());
+  BTM_unblock_role_switch_and_sniff_mode_for(p_scb->PeerAddress());
 
   if (p_scb->co_started) {
     if (p_scb->offload_started) {
@@ -2316,10 +2319,13 @@ void bta_av_start_ok(tBTA_AV_SCB* p_scb, tBTA_AV_DATA* p_data) {
       /* If souce is the central role, disable role switch during streaming.
        * Otherwise allow role switch, if source is peripheral.
        * Because it would not hurt source, if the peer device wants source to be
-       * central */
+       * central.
+       * disable sniff mode unconditionally during streaming */
       if ((BTM_GetRole(p_scb->PeerAddress(), &cur_role) == BTM_SUCCESS) &&
           (cur_role == HCI_ROLE_CENTRAL)) {
-        BTM_block_role_switch_for(p_scb->PeerAddress());
+        BTM_block_role_switch_and_sniff_mode_for(p_scb->PeerAddress());
+      } else {
+        BTM_block_sniff_mode_for(p_scb->PeerAddress());
       }
     }
 
@@ -2382,8 +2388,7 @@ void bta_av_start_failed(tBTA_AV_SCB* p_scb, UNUSED_ATTR tBTA_AV_DATA* p_data) {
     notify_start_failed(p_scb);
   }
 
-  BTM_unblock_role_switch_for(p_scb->PeerAddress());
-  BTM_unblock_sniff_mode_for(p_scb->PeerAddress());
+  BTM_unblock_role_switch_and_sniff_mode_for(p_scb->PeerAddress());
   p_scb->sco_suspend = false;
 }
 
@@ -2405,8 +2410,7 @@ void bta_av_str_closed(tBTA_AV_SCB* p_scb, tBTA_AV_DATA* p_data) {
       __func__, p_scb->PeerAddress().ToString().c_str(), p_scb->hndl,
       p_scb->open_status, p_scb->chnl, p_scb->co_started);
 
-  BTM_unblock_role_switch_for(p_scb->PeerAddress());
-  BTM_unblock_sniff_mode_for(p_scb->PeerAddress());
+  BTM_unblock_role_switch_and_sniff_mode_for(p_scb->PeerAddress());
   if (bta_av_cb.audio_open_cnt <= 1) {
     BTM_default_unblock_role_switch();
   }
@@ -2510,8 +2514,7 @@ void bta_av_suspend_cfm(tBTA_AV_SCB* p_scb, tBTA_AV_DATA* p_data) {
   }
 
   bta_sys_idle(BTA_ID_AV, bta_av_cb.audio_open_cnt, p_scb->PeerAddress());
-  BTM_unblock_role_switch_for(p_scb->PeerAddress());
-  BTM_unblock_sniff_mode_for(p_scb->PeerAddress());
+  BTM_unblock_role_switch_and_sniff_mode_for(p_scb->PeerAddress());
 
   /* in case that we received suspend_ind, we may need to call co_stop here */
   if (p_scb->co_started) {
@@ -3043,6 +3046,13 @@ void bta_av_vendor_offload_start(tBTA_AV_SCB* p_scb,
   ARRAY_TO_STREAM(p_param, offload_start->codec_info,
                   (int8_t)sizeof(offload_start->codec_info));
   p_scb->offload_started = true;
+  LOG_INFO(
+      "codec: %#x, sample rate: %#x, bit depth: %#x, channel: %#x, bitrate: "
+      "%#x, ACL: %#x, L2CAP: %#x, MTU: %#x",
+      offload_start->codec_type, offload_start->sample_rate,
+      offload_start->bits_per_sample, offload_start->ch_mode,
+      offload_start->encoded_audio_bitrate, offload_start->acl_hdl,
+      offload_start->l2c_rcid, offload_start->mtu);
   BTM_VendorSpecificCommand(HCI_CONTROLLER_A2DP, p_param - param,
                             param, offload_vendor_callback);
 }

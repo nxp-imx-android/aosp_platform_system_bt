@@ -26,12 +26,9 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "bt_common.h"
-#include "bt_types.h"
 #include "btm_api.h"
 #include "device/include/controller.h"
 #include "hci/include/btsnoop.h"
-#include "hcidefs.h"
 #include "l2c_int.h"
 #include "l2cdefs.h"
 #include "main/shim/l2c_api.h"
@@ -40,6 +37,7 @@
 #include "osi/include/log.h"
 #include "stack/btm/btm_sec.h"
 #include "stack/include/acl_api.h"
+#include "stack/include/bt_hdr.h"
 #include "stack/include/hci_error_code.h"
 
 tL2C_CCB* l2cu_get_next_channel_in_rr(tL2C_LCB* p_lcb); // TODO Move

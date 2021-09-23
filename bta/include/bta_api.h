@@ -303,11 +303,13 @@ typedef struct {
 /* Structure associated with BTA_DM_LINK_UP_EVT */
 typedef struct {
   RawAddress bd_addr; /* BD address peer device. */
+  tBT_TRANSPORT transport_link_type;
 } tBTA_DM_LINK_UP;
 
 /* Structure associated with BTA_DM_LINK_DOWN_EVT */
 typedef struct {
   RawAddress bd_addr; /* BD address peer device. */
+  tBT_TRANSPORT transport_link_type;
 } tBTA_DM_LINK_DOWN;
 
 #define BTA_AUTH_SP_YES                                                       \
@@ -427,6 +429,7 @@ typedef struct {
   uint16_t ble_periodic_adv_int;
   tBT_DEVICE_TYPE device_type;
   uint8_t flag;
+  bool include_rsi; /* true, if ADV contains RSI data */
 } tBTA_DM_INQ_RES;
 
 /* Structure associated with BTA_DM_INQ_CMPL_EVT */

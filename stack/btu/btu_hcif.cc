@@ -29,22 +29,25 @@
 
 #include <base/bind.h>
 #include <base/location.h>
+
 #include <cstdint>
 
 #include "btif/include/btif_config.h"
 #include "common/metrics.h"
 #include "device/include/controller.h"
+#include "main/shim/hci_layer.h"
+#include "osi/include/allocator.h"
 #include "osi/include/log.h"
 #include "stack/include/acl_hci_link_interface.h"
 #include "stack/include/ble_acl_interface.h"
 #include "stack/include/ble_hci_link_interface.h"
+#include "stack/include/bt_hdr.h"
 #include "stack/include/btm_iso_api.h"
 #include "stack/include/btu.h"
 #include "stack/include/dev_hci_link_interface.h"
 #include "stack/include/gatt_api.h"
 #include "stack/include/hci_error_code.h"
 #include "stack/include/hci_evt_length.h"
-#include "stack/include/hcidefs.h"
 #include "stack/include/inq_hci_link_interface.h"
 #include "stack/include/l2cap_hci_link_interface.h"
 #include "stack/include/sco_hci_link_interface.h"
@@ -734,7 +737,7 @@ void btu_hcif_send_cmd(UNUSED_ATTR uint8_t controller_id, BT_HDR* p_buf) {
   btu_hcif_log_command_metrics(opcode, stream,
                                android::bluetooth::hci::STATUS_UNKNOWN, false);
 
-  hci_layer_get_interface()->transmit_command(
+  bluetooth::shim::hci_layer_get_interface()->transmit_command(
       p_buf, btu_hcif_command_complete_evt, btu_hcif_command_status_evt,
       vsc_callback);
 }
@@ -915,7 +918,7 @@ void btu_hcif_send_cmd_with_cb(const base::Location& posted_from,
   cb_wrapper->cb = std::move(cb);
   cb_wrapper->posted_from = posted_from;
 
-  hci_layer_get_interface()->transmit_command(
+  bluetooth::shim::hci_layer_get_interface()->transmit_command(
       p, btu_hcif_command_complete_evt_with_cb,
       btu_hcif_command_status_evt_with_cb, (void*)cb_wrapper);
 }
@@ -1190,11 +1193,11 @@ static void btu_hcif_esco_connection_comp_evt(uint8_t* p) {
   STREAM_TO_BDADDR(bda, p);
 
   STREAM_TO_UINT8(data.link_type, p);
-  STREAM_TO_UINT8(data.tx_interval, p);
-  STREAM_TO_UINT8(data.retrans_window, p);
-  STREAM_TO_UINT16(data.rx_pkt_len, p);
-  STREAM_TO_UINT16(data.tx_pkt_len, p);
-  STREAM_TO_UINT8(data.air_mode, p);
+  STREAM_SKIP_UINT8(p);   // tx_interval
+  STREAM_SKIP_UINT8(p);   // retrans_window
+  STREAM_SKIP_UINT16(p);  // rx_pkt_len
+  STREAM_SKIP_UINT16(p);  // tx_pkt_len
+  STREAM_SKIP_UINT8(p);   // air_mode
 
   handle = HCID_GET_HANDLE(handle);
 
@@ -1228,9 +1231,6 @@ static void btu_hcif_esco_connection_chg_evt(uint8_t* p) {
   STREAM_TO_UINT16(tx_pkt_len, p);
 
   handle = HCID_GET_HANDLE(handle);
-
-  btm_esco_proc_conn_chg(status, handle, tx_interval, retrans_window,
-                         rx_pkt_len, tx_pkt_len);
 }
 
 /*******************************************************************************
@@ -1456,9 +1456,6 @@ static void btu_hcif_hdl_command_status(uint16_t opcode, uint8_t status,
       if (status != HCI_SUCCESS) {
         STREAM_TO_UINT16(handle, p_cmd);
         // Determine if initial connection failed or is a change of setup
-        if (btm_is_sco_active(handle)) {
-          btm_esco_proc_conn_chg(status, handle, 0, 0, 0, 0);
-        }
       }
       break;
 
@@ -1540,14 +1537,7 @@ static void btu_hcif_command_status_evt(uint8_t status, BT_HDR* command,
  *
  ******************************************************************************/
 static void btu_hcif_hardware_error_evt(uint8_t* p) {
-  HCI_TRACE_ERROR("Ctlr H/w error event - code:0x%x", *p);
-  if (hci_is_root_inflammation_event_received()) {
-    // Ignore the hardware error event here as we have already received
-    // root inflammation event earlier.
-    HCI_TRACE_ERROR("H/w error event after root inflammation event!");
-    return;
-  }
-
+  LOG_ERROR("UNHANDLED Ctlr H/w error event - code:0x%x", *p);
   BTA_sys_signal_hw_error();
 }
 

@@ -26,7 +26,7 @@
 #define AVCT_API_H
 
 #include "bt_target.h"
-#include "bt_types.h"
+#include "stack/include/bt_hdr.h"
 
 /*****************************************************************************
  *  Constants

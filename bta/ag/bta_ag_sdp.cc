@@ -31,6 +31,7 @@
 
 #include "bta/ag/bta_ag_int.h"
 #include "btif/include/btif_config.h"
+#include "osi/include/allocator.h"
 #include "stack/include/btm_api.h"
 #include "stack/include/btu.h"  // do_in_main_thread
 #include "stack/include/port_api.h"
@@ -368,7 +369,7 @@ bool bta_ag_sdp_find_attr(tBTA_AG_SCB* p_scb, tBTA_SERVICE_MASK service) {
           // 2. But do not send required AT+BAC command
           // Will assume mSBC is enabled and try codec negotiation by default
           p_scb->codec_updated = true;
-          p_scb->peer_codecs = BTA_AG_CODEC_CVSD & BTA_AG_CODEC_MSBC;
+          p_scb->peer_codecs = BTM_SCO_CODEC_CVSD & BTM_SCO_CODEC_MSBC;
           p_scb->sco_codec = UUID_CODEC_MSBC;
         }
         if (sdp_features != p_scb->peer_sdp_features) {

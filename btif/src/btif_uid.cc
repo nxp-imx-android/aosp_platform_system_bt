@@ -24,8 +24,8 @@
  ******************************************************************************/
 #include <mutex>
 
-#include "bt_common.h"
 #include "btif_uid.h"
+#include "osi/include/allocator.h"
 
 static std::mutex set_lock;
 

@@ -1,25 +1,20 @@
-use bt_topshim::btif::get_btinterface;
-use bt_topshim::topstack;
-
-use dbus::channel::MatchingReceiver;
-use dbus::message::MatchRule;
-
+use dbus::{channel::MatchingReceiver, message::MatchRule};
 use dbus_crossroads::Crossroads;
-
-use dbus_projection::DisconnectWatcher;
-
 use dbus_tokio::connection;
-
 use futures::future;
-
-use btstack::bluetooth::get_bt_dispatcher;
-use btstack::bluetooth::{Bluetooth, IBluetooth};
-use btstack::bluetooth_gatt::BluetoothGatt;
-use btstack::bluetooth_media::{BluetoothMedia, IBluetoothMedia};
-use btstack::Stack;
-
+use log::LevelFilter;
 use std::error::Error;
 use std::sync::{Arc, Mutex};
+use syslog::{BasicLogger, Facility, Formatter3164};
+
+use bt_topshim::{btif::get_btinterface, topstack};
+use btstack::{
+    bluetooth::{get_bt_dispatcher, Bluetooth, IBluetooth},
+    bluetooth_gatt::BluetoothGatt,
+    bluetooth_media::BluetoothMedia,
+    Stack,
+};
+use dbus_projection::DisconnectWatcher;
 
 mod dbus_arg;
 mod iface_bluetooth;
@@ -49,13 +44,28 @@ fn make_object_name(idx: i32, name: &str) -> String {
 
 /// Runs the Bluetooth daemon serving D-Bus IPC.
 fn main() -> Result<(), Box<dyn Error>> {
+    let formatter = Formatter3164 {
+        facility: Facility::LOG_USER,
+        hostname: None,
+        process: "btadapterd".into(),
+        pid: 0,
+    };
+
+    let logger = syslog::unix(formatter).expect("could not connect to syslog");
+    let _ = log::set_boxed_logger(Box::new(BasicLogger::new(logger)))
+        .map(|()| log::set_max_level(LevelFilter::Info));
+
     let (tx, rx) = Stack::create_channel();
 
     let intf = Arc::new(Mutex::new(get_btinterface().unwrap()));
-    let bluetooth = Arc::new(Mutex::new(Box::new(Bluetooth::new(tx.clone(), intf.clone()))));
     let bluetooth_gatt = Arc::new(Mutex::new(Box::new(BluetoothGatt::new(intf.clone()))));
     let bluetooth_media =
         Arc::new(Mutex::new(Box::new(BluetoothMedia::new(tx.clone(), intf.clone()))));
+    let bluetooth = Arc::new(Mutex::new(Box::new(Bluetooth::new(
+        tx.clone(),
+        intf.clone(),
+        bluetooth_media.clone(),
+    ))));
 
     // Args don't include arg[0] which is the binary name
     let all_args = std::env::args().collect::<Vec<String>>();
@@ -72,7 +82,6 @@ fn main() -> Result<(), Box<dyn Error>> {
         bluetooth.enable();
 
         bluetooth_gatt.lock().unwrap().init_profiles(tx.clone());
-        bluetooth_media.lock().unwrap().initialize();
     }
 
     topstack::get_runtime().block_on(async {
@@ -115,7 +124,7 @@ fn main() -> Result<(), Box<dyn Error>> {
             make_object_name(adapter_index, "adapter"),
             conn.clone(),
             &mut cr,
-            bluetooth,
+            bluetooth.clone(),
             disconnect_watcher.clone(),
         );
         // Register D-Bus method handlers of IBluetoothGatt.

@@ -20,14 +20,11 @@
 
 #include "bt_target.h"
 
-#include "bt_types.h"
 #include "btm_ble_api.h"
 #include "btm_dev.h"
 #include "btm_int.h"
 #include "btu.h"
 #include "device/include/controller.h"
-#include "hcidefs.h"
-#include "hcimsgs.h"
 #include "stack/btm/btm_ble_int.h"
 #include "stack/btm/btm_int_types.h"
 #include "utils/include/bt_utils.h"

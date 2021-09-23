@@ -26,12 +26,10 @@
 #ifndef BTM_BLE_INT_H
 #define BTM_BLE_INT_H
 
-#include "bt_common.h"
 #include "bt_target.h"
 #include "btm_ble_api.h"
 #include "btm_ble_int_types.h"
 #include "btm_int_types.h"
-#include "hcidefs.h"
 #include "smp_api.h"
 #include "stack/include/hci_error_code.h"
 

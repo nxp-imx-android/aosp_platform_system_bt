@@ -24,12 +24,13 @@
 #ifndef AVRC_API_H
 #define AVRC_API_H
 
-#include "avct_api.h"
-#include "avrc_defs.h"
-#include "bt_target.h"
-#include "sdp_api.h"
-
 #include <base/callback.h>
+
+#include "bt_target.h"
+#include "stack/include/avct_api.h"
+#include "stack/include/avrc_defs.h"
+#include "stack/include/bt_hdr.h"
+#include "stack/include/sdp_api.h"
 
 /*****************************************************************************
  *  constants
@@ -131,7 +132,7 @@
 #endif
 
 #ifndef AVRC_DEFAULT_VERSION
-#define AVRC_DEFAULT_VERSION AVRC_1_4_STRING
+#define AVRC_DEFAULT_VERSION AVRC_1_5_STRING
 #endif
 
 /* Supported categories */

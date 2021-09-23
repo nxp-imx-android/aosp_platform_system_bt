@@ -25,13 +25,11 @@
 extern std::map<std::string, int> mock_function_count_map;
 
 #include <cstdint>
-#include "bt_trace.h"
 #include "bta/hf_client/bta_hf_client_int.h"
 #include "bta/include/bta_hf_client_api.h"
 #include "bta/sys/bta_sys.h"
 #include "osi/include/allocator.h"
 #include "osi/include/compat.h"
-#include "stack/include/bt_types.h"
 #include "types/raw_address.h"
 
 #ifndef UNUSED_ATTR

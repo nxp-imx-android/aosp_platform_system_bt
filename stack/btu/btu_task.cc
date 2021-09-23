@@ -18,6 +18,10 @@
 
 #define LOG_TAG "bt_btu_task"
 
+#include <base/bind.h>
+#include <base/logging.h>
+#include <base/run_loop.h>
+#include <base/threading/thread.h>
 #include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -25,19 +29,15 @@
 
 #include "bta/sys/bta_sys.h"
 #include "btcore/include/module.h"
-#include "bte.h"
 #include "btif/include/btif_common.h"
 #include "btm_iso_api.h"
 #include "common/message_loop_thread.h"
+#include "osi/include/allocator.h"
 #include "osi/include/log.h"
 #include "osi/include/osi.h"
 #include "stack/include/acl_hci_link_interface.h"
+#include "stack/include/bt_hdr.h"
 #include "stack/include/btu.h"
-
-#include <base/bind.h>
-#include <base/logging.h>
-#include <base/run_loop.h>
-#include <base/threading/thread.h>
 
 using bluetooth::common::MessageLoopThread;
 using bluetooth::hci::IsoManager;

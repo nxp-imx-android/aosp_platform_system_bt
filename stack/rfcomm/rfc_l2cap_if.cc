@@ -22,21 +22,18 @@
  *
  ******************************************************************************/
 
-#include <stddef.h>
+#include <cstddef>
+#include <cstdint>
+
 #include "bt_target.h"
-
-#include "bt_common.h"
 #include "common/time_util.h"
-#include "osi/include/osi.h"
-
-#include "bt_utils.h"
-#include "hci/include/btsnoop.h"
-#include "l2c_api.h"
-#include "l2cdefs.h"
-#include "port_api.h"
-#include "port_int.h"
-#include "rfc_int.h"
-#include "rfcdefs.h"
+#include "osi/include/allocator.h"
+#include "osi/include/osi.h"  // UNUSED_ATTR
+#include "stack/include/bt_hdr.h"
+#include "stack/include/l2c_api.h"
+#include "stack/rfcomm/port_int.h"
+#include "stack/rfcomm/rfc_int.h"
+#include "types/raw_address.h"
 
 /*
  * Define Callback functions to be called by L2CAP
@@ -204,7 +201,7 @@ void RFCOMM_ConfigInd(uint16_t lcid, tL2CAP_CFG_INFO* p_cfg) {
  *                  event to the FSM.
  *
  ******************************************************************************/
-void RFCOMM_ConfigCnf(uint16_t lcid, uint16_t initiator,
+void RFCOMM_ConfigCnf(uint16_t lcid, UNUSED_ATTR uint16_t initiator,
                       tL2CAP_CFG_INFO* p_cfg) {
   RFCOMM_ConfigInd(lcid, p_cfg);
 
@@ -257,7 +254,7 @@ void RFCOMM_BufDataInd(uint16_t lcid, BT_HDR* p_buf) {
     return;
   }
 
-  uint8_t event = rfc_parse_data(p_mcb, &rfc_cb.rfc.rx_frame, p_buf);
+  tRFC_EVENT event = rfc_parse_data(p_mcb, &rfc_cb.rfc.rx_frame, p_buf);
 
   /* If the frame did not pass validation just ignore it */
   if (event == RFC_EVENT_BAD_FRAME) {
@@ -277,7 +274,7 @@ void RFCOMM_BufDataInd(uint16_t lcid, BT_HDR* p_buf) {
     }
 
     /* Other multiplexer events go to state machine */
-    rfc_mx_sm_execute(p_mcb, event, nullptr);
+    rfc_mx_sm_execute(p_mcb, static_cast<tRFC_MX_EVENT>(event), nullptr);
     osi_free(p_buf);
     return;
   }

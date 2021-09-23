@@ -26,7 +26,6 @@
 
 #include <string.h>
 
-#include "bt_common.h"
 #include "bt_target.h"
 #include "hci/include/btsnoop.h"
 #include "hcimsgs.h"
@@ -34,8 +33,10 @@
 #include "l2c_int.h"
 #include "l2cdefs.h"
 #include "main/shim/shim.h"
+#include "osi/include/allocator.h"
 #include "osi/include/log.h"
 #include "osi/include/osi.h"
+#include "stack/include/bt_hdr.h"
 
 /******************************************************************************/
 /*            L O C A L    F U N C T I O N     P R O T O T Y P E S            */

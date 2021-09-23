@@ -27,11 +27,11 @@
 #include <inttypes.h>
 #include <limits.h>
 #include <string.h>
+
 #include <algorithm>
 
 #include "audio_a2dp_hw/include/audio_a2dp_hw.h"
 #include "audio_hal_interface/a2dp_encoding.h"
-#include "bt_common.h"
 #include "bta_av_ci.h"
 #include "btif_a2dp.h"
 #include "btif_a2dp_control.h"
@@ -44,12 +44,14 @@
 #include "common/metrics.h"
 #include "common/repeating_timer.h"
 #include "common/time_util.h"
+#include "osi/include/allocator.h"
 #include "osi/include/fixed_queue.h"
 #include "osi/include/log.h"
 #include "osi/include/osi.h"
 #include "osi/include/wakelock.h"
 #include "stack/include/acl_api.h"
 #include "stack/include/acl_api_types.h"
+#include "stack/include/bt_hdr.h"
 #include "uipc.h"
 
 using bluetooth::common::A2dpSessionMetrics;
@@ -249,6 +251,8 @@ static void btif_a2dp_source_audio_tx_flush_event(void);
 static void btif_a2dp_source_setup_codec(const RawAddress& peer_addr);
 static void btif_a2dp_source_setup_codec_delayed(
     const RawAddress& peer_address);
+static void btif_a2dp_source_cleanup_codec();
+static void btif_a2dp_source_cleanup_codec_delayed();
 static void btif_a2dp_source_encoder_user_config_update_event(
     const RawAddress& peer_address,
     const std::vector<btav_a2dp_codec_config_t>& codec_user_preferences,
@@ -452,6 +456,7 @@ bool btif_a2dp_source_end_session(const RawAddress& peer_address) {
   btif_a2dp_source_thread.DoInThread(
       FROM_HERE,
       base::Bind(&btif_a2dp_source_end_session_delayed, peer_address));
+  btif_a2dp_source_cleanup_codec();
   return true;
 }
 
@@ -590,6 +595,24 @@ static void btif_a2dp_source_setup_codec_delayed(
 
   if (bluetooth::audio::a2dp::is_hal_2_0_enabled()) {
     bluetooth::audio::a2dp::setup_codec();
+  }
+}
+
+static void btif_a2dp_source_cleanup_codec() {
+  LOG_INFO("%s: state=%s", __func__, btif_a2dp_source_cb.StateStr().c_str());
+  if (btif_a2dp_source_is_streaming()) {
+    // Must stop media task first before cleaning up the encoder
+    btif_a2dp_source_stop_audio_req();
+  }
+  btif_a2dp_source_thread.DoInThread(
+      FROM_HERE, base::Bind(&btif_a2dp_source_cleanup_codec_delayed));
+}
+
+static void btif_a2dp_source_cleanup_codec_delayed() {
+  LOG_INFO("%s: state=%s", __func__, btif_a2dp_source_cb.StateStr().c_str());
+  if (btif_a2dp_source_cb.encoder_interface != nullptr) {
+    btif_a2dp_source_cb.encoder_interface->encoder_cleanup();
+    btif_a2dp_source_cb.encoder_interface = nullptr;
   }
 }
 

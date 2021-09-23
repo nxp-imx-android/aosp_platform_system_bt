@@ -24,12 +24,15 @@
 #include "base/bind.h"
 #include "base/callback.h"
 #include "bind_helpers.h"
-#include "bt_types.h"
 #include "btm_iso_api.h"
-#include "btu.h"
 #include "common/time_util.h"
 #include "device/include/controller.h"
+#include "hci/include/hci_layer.h"
+#include "osi/include/allocator.h"
 #include "osi/include/log.h"
+#include "stack/include/bt_hdr.h"
+#include "stack/include/hci_error_code.h"
+#include "stack/include/hcidefs.h"
 
 namespace bluetooth {
 namespace hci {

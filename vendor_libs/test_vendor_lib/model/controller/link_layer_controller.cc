@@ -65,8 +65,7 @@ void LinkLayerController::SendLinkLayerPacket(
 }
 
 ErrorCode LinkLayerController::SendLeCommandToRemoteByAddress(
-    OpCode opcode, bluetooth::packet::PacketView<true> args,
-    const Address& remote, const Address& local) {
+    OpCode opcode, const Address& remote, const Address& local) {
   switch (opcode) {
     case (OpCode::LE_READ_REMOTE_FEATURES):
       SendLinkLayerPacket(
@@ -133,7 +132,7 @@ ErrorCode LinkLayerController::SendCommandToRemoteByHandle(
   switch (opcode) {
     case (OpCode::LE_READ_REMOTE_FEATURES):
       return SendLeCommandToRemoteByAddress(
-          opcode, args, connections_.GetAddress(handle).GetAddress(),
+          opcode, connections_.GetAddress(handle).GetAddress(),
           connections_.GetOwnAddress(handle).GetAddress());
     default:
       return SendCommandToRemoteByAddress(
@@ -794,8 +793,10 @@ void LinkLayerController::IncomingIoCapabilityRequestPacket(
             incoming.GetDestinationAddress(), incoming.GetSourceAddress(),
             static_cast<uint8_t>(
                 ErrorCode::UNSUPPORTED_REMOTE_OR_LMP_FEATURE)));
-    security_manager_.AuthenticationRequest(incoming.GetSourceAddress(), handle,
-                                            false);
+    if (!security_manager_.AuthenticationInProgress()) {
+      security_manager_.AuthenticationRequest(incoming.GetSourceAddress(),
+                                              handle, false);
+    }
     security_manager_.SetPinRequested(peer);
     if (properties_.IsUnmasked(EventCode::PIN_CODE_REQUEST)) {
       send_event_(bluetooth::hci::PinCodeRequestBuilder::Create(
@@ -1495,7 +1496,7 @@ void LinkLayerController::IncomingLeScanResponsePacket(
     raw_builder_ptr->AddOctets1(static_cast<uint8_t>(
         bluetooth::hci::SubeventCode::EXTENDED_ADVERTISING_REPORT));
     raw_builder_ptr->AddOctets1(0x01);  // num reports
-    raw_builder_ptr->AddOctets1(0x1a);  // TODO: 0x1b for ADV_SCAN_IND
+    raw_builder_ptr->AddOctets2(0x001a);  // TODO: 0x001b for ADV_SCAN_IND
     raw_builder_ptr->AddOctets1(static_cast<uint8_t>(address_type));
     raw_builder_ptr->AddAddress(incoming.GetSourceAddress());
     raw_builder_ptr->AddOctets1(1);     // Primary_PHY
@@ -1894,7 +1895,9 @@ ErrorCode LinkLayerController::LinkKeyRequestNegativeReply(
   }
 
   if (properties_.GetSecureSimplePairingSupported()) {
-    security_manager_.AuthenticationRequest(address, handle, false);
+    if (!security_manager_.AuthenticationInProgress()) {
+      security_manager_.AuthenticationRequest(address, handle, false);
+    }
 
     ScheduleTask(milliseconds(5),
                  [this, address]() { StartSimplePairing(address); });
@@ -2571,6 +2574,12 @@ ErrorCode LinkLayerController::SetLeExtendedAdvertisingData(
   return ErrorCode::SUCCESS;
 }
 
+ErrorCode LinkLayerController::SetLeExtendedScanResponseData(
+    uint8_t set, const std::vector<uint8_t>& data) {
+  advertisers_[set].SetScanResponse(data);
+  return ErrorCode::SUCCESS;
+}
+
 ErrorCode LinkLayerController::SetLeExtendedAdvertisingParameters(
     uint8_t set, uint16_t interval_min, uint16_t interval_max,
     bluetooth::hci::LegacyAdvertisingProperties type,
@@ -2787,7 +2796,7 @@ void LinkLayerController::LeSetPrivacyMode(uint8_t address_type, Address addr,
   LOG_INFO("mode = %d ", mode);
 }
 
-void LinkLayerController::LeReadIsoTxSync(uint16_t handle) {}
+void LinkLayerController::LeReadIsoTxSync(uint16_t /* handle */) {}
 
 void LinkLayerController::LeSetCigParameters(
     uint8_t cig_id, uint32_t sdu_interval_m_to_s, uint32_t sdu_interval_s_to_m,
@@ -2901,41 +2910,45 @@ ErrorCode LinkLayerController::LeRejectCisRequest(uint16_t cis_handle,
 }
 
 ErrorCode LinkLayerController::LeCreateBig(
-    uint8_t big_handle, uint8_t advertising_handle, uint8_t num_bis,
-    uint32_t sdu_interval, uint16_t max_sdu, uint16_t max_transport_latency,
-    uint8_t rtn, bluetooth::hci::SecondaryPhyType phy,
-    bluetooth::hci::Packing packing, bluetooth::hci::Enable framing,
-    bluetooth::hci::Enable encryption, std::vector<uint16_t> broadcast_code) {
+    uint8_t /* big_handle */, uint8_t /* advertising_handle */,
+    uint8_t /* num_bis */, uint32_t /* sdu_interval */, uint16_t /* max_sdu */,
+    uint16_t /* max_transport_latency */, uint8_t /* rtn */,
+    bluetooth::hci::SecondaryPhyType /* phy */,
+    bluetooth::hci::Packing /* packing */, bluetooth::hci::Enable /* framing */,
+    bluetooth::hci::Enable /* encryption */,
+    std::vector<uint16_t> /* broadcast_code */) {
   return ErrorCode::SUCCESS;
 }
 
-ErrorCode LinkLayerController::LeTerminateBig(uint8_t big_handle,
-                                              ErrorCode reason) {
+ErrorCode LinkLayerController::LeTerminateBig(uint8_t /* big_handle */,
+                                              ErrorCode /* reason */) {
   return ErrorCode::SUCCESS;
 }
 
 ErrorCode LinkLayerController::LeBigCreateSync(
-    uint8_t big_handle, uint16_t sync_handle, bluetooth::hci::Enable encryption,
-    std::vector<uint16_t> broadcast_code, uint8_t mse,
-    uint16_t big_sync_timeout, std::vector<uint8_t> bis) {
+    uint8_t /* big_handle */, uint16_t /* sync_handle */,
+    bluetooth::hci::Enable /* encryption */,
+    std::vector<uint16_t> /* broadcast_code */, uint8_t /* mse */,
+    uint16_t /* big_sync_timeout */, std::vector<uint8_t> /* bis */) {
   return ErrorCode::SUCCESS;
 }
 
-void LinkLayerController::LeBigTerminateSync(uint8_t big_handle) {}
+void LinkLayerController::LeBigTerminateSync(uint8_t /* big_handle */) {}
 
-ErrorCode LinkLayerController::LeRequestPeerSca(uint16_t request_handle) {
+ErrorCode LinkLayerController::LeRequestPeerSca(uint16_t /* request_handle */) {
   return ErrorCode::SUCCESS;
 }
 
 void LinkLayerController::LeSetupIsoDataPath(
-    uint16_t connection_handle,
-    bluetooth::hci::DataPathDirection data_path_direction, uint8_t data_path_id,
-    uint64_t codec_id, uint32_t controller_Delay,
-    std::vector<uint8_t> codec_configuration) {}
+    uint16_t /* connection_handle */,
+    bluetooth::hci::DataPathDirection /* data_path_direction */,
+    uint8_t /* data_path_id */, uint64_t /* codec_id */,
+    uint32_t /* controller_Delay */,
+    std::vector<uint8_t> /* codec_configuration */) {}
 
 void LinkLayerController::LeRemoveIsoDataPath(
-    uint16_t connection_handle,
-    bluetooth::hci::DataPathDirection data_path_direction) {}
+    uint16_t /* connection_handle */,
+    bluetooth::hci::DataPathDirection /* data_path_direction */) {}
 
 void LinkLayerController::HandleLeEnableEncryption(
     uint16_t handle, std::array<uint8_t, 8> rand, uint16_t ediv,
