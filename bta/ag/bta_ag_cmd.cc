@@ -440,7 +440,7 @@ static uint8_t bta_ag_parse_chld(UNUSED_ATTR tBTA_AG_SCB* p_scb, char* p_s) {
  ******************************************************************************/
 static tBTA_AG_PEER_CODEC bta_ag_parse_bac(tBTA_AG_SCB* p_scb, char* p_s,
                                            char* p_end) {
-  tBTA_AG_PEER_CODEC retval = BTA_AG_CODEC_NONE;
+  tBTA_AG_PEER_CODEC retval = BTM_SCO_CODEC_NONE;
   uint16_t uuid_codec;
   char* p;
 
@@ -462,10 +462,10 @@ static tBTA_AG_PEER_CODEC bta_ag_parse_bac(tBTA_AG_SCB* p_scb, char* p_s,
     uuid_codec = utl_str2int(p_s);
     switch (uuid_codec) {
       case UUID_CODEC_CVSD:
-        retval |= BTA_AG_CODEC_CVSD;
+        retval |= BTM_SCO_CODEC_CVSD;
         break;
       case UUID_CODEC_MSBC:
-        retval |= BTA_AG_CODEC_MSBC;
+        retval |= BTM_SCO_CODEC_MSBC;
         break;
       default:
         APPL_TRACE_ERROR("Unknown Codec UUID(%d) received", uuid_codec);
@@ -1249,7 +1249,7 @@ void bta_ag_at_hfp_cback(tBTA_AG_SCB* p_scb, uint16_t cmd, uint8_t arg_type,
         p_scb->peer_codecs = bta_ag_parse_bac(p_scb, p_arg, p_end);
         p_scb->codec_updated = true;
 
-        if (p_scb->peer_codecs & BTA_AG_CODEC_MSBC) {
+        if (p_scb->peer_codecs & BTM_SCO_CODEC_MSBC) {
           p_scb->sco_codec = UUID_CODEC_MSBC;
           APPL_TRACE_DEBUG("Received AT+BAC, updating sco codec to MSBC");
         } else {
@@ -1269,7 +1269,7 @@ void bta_ag_at_hfp_cback(tBTA_AG_SCB* p_scb, uint16_t cmd, uint8_t arg_type,
           bta_ag_codec_negotiate(p_scb);
         }
       } else {
-        p_scb->peer_codecs = BTA_AG_CODEC_CVSD;
+        p_scb->peer_codecs = BTM_SCO_CODEC_CVSD;
         APPL_TRACE_ERROR(
             "Unexpected CMD:AT+BAC, Codec Negotiation is not supported");
       }
@@ -1282,10 +1282,10 @@ void bta_ag_at_hfp_cback(tBTA_AG_SCB* p_scb, uint16_t cmd, uint8_t arg_type,
 
       switch (int_arg) {
         case UUID_CODEC_CVSD:
-          codec_type = BTA_AG_CODEC_CVSD;
+          codec_type = BTM_SCO_CODEC_CVSD;
           break;
         case UUID_CODEC_MSBC:
-          codec_type = BTA_AG_CODEC_MSBC;
+          codec_type = BTM_SCO_CODEC_MSBC;
           break;
         default:
           APPL_TRACE_ERROR("Unknown codec_uuid %d", int_arg);
@@ -1294,7 +1294,7 @@ void bta_ag_at_hfp_cback(tBTA_AG_SCB* p_scb, uint16_t cmd, uint8_t arg_type,
       }
 
       if (p_scb->codec_fallback)
-        codec_sent = BTA_AG_CODEC_CVSD;
+        codec_sent = BTM_SCO_CODEC_CVSD;
       else
         codec_sent = p_scb->sco_codec;
 
@@ -1767,13 +1767,13 @@ void bta_ag_send_bcs(tBTA_AG_SCB* p_scb) {
     codec_uuid = UUID_CODEC_CVSD;
   } else {
     switch (p_scb->sco_codec) {
-      case BTA_AG_CODEC_NONE:
+      case BTM_SCO_CODEC_NONE:
         codec_uuid = UUID_CODEC_CVSD;
         break;
-      case BTA_AG_CODEC_CVSD:
+      case BTM_SCO_CODEC_CVSD:
         codec_uuid = UUID_CODEC_CVSD;
         break;
-      case BTA_AG_CODEC_MSBC:
+      case BTM_SCO_CODEC_MSBC:
         codec_uuid = UUID_CODEC_MSBC;
         break;
       default:

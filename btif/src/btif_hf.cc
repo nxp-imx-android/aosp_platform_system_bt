@@ -491,10 +491,10 @@ static void btif_hf_upstreams_evt(uint16_t event, char* p_param) {
       BTIF_TRACE_DEBUG(
           "BTA_AG_WBS_EVT Set codec status %d codec %d 1=CVSD 2=MSBC",
           p_data->val.hdr.status, p_data->val.num);
-      if (p_data->val.num == BTA_AG_CODEC_CVSD) {
+      if (p_data->val.num == BTM_SCO_CODEC_CVSD) {
         bt_hf_callbacks->WbsCallback(BTHF_WBS_NO,
                                      &btif_hf_cb[idx].connected_bda);
-      } else if (p_data->val.num == BTA_AG_CODEC_MSBC) {
+      } else if (p_data->val.num == BTM_SCO_CODEC_MSBC) {
         bt_hf_callbacks->WbsCallback(BTHF_WBS_YES,
                                      &btif_hf_cb[idx].connected_bda);
       } else {
@@ -539,14 +539,14 @@ static void btif_hf_upstreams_evt(uint16_t event, char* p_param) {
       we should set the BTA AG Codec to mSBC. This would trigger a +BCS to mSBC
       at the time
       of SCO connection establishment */
-      if (p_data->val.num & BTA_AG_CODEC_MSBC) {
+      if (p_data->val.num & BTM_SCO_CODEC_MSBC) {
         BTIF_TRACE_EVENT("%s: btif_hf override-Preferred Codec to MSBC",
                          __func__);
-        BTA_AgSetCodec(btif_hf_cb[idx].handle, BTA_AG_CODEC_MSBC);
+        BTA_AgSetCodec(btif_hf_cb[idx].handle, BTM_SCO_CODEC_MSBC);
       } else {
         BTIF_TRACE_EVENT("%s btif_hf override-Preferred Codec to CVSD",
                          __func__);
-        BTA_AgSetCodec(btif_hf_cb[idx].handle, BTA_AG_CODEC_CVSD);
+        BTA_AgSetCodec(btif_hf_cb[idx].handle, BTM_SCO_CODEC_CVSD);
       }
       break;
     case BTA_AG_AT_BCS_EVT:
@@ -555,7 +555,7 @@ static void btif_hf_upstreams_evt(uint16_t event, char* p_param) {
       /* No BTHF_WBS_NONE case, because HF1.6 supported device can send BCS */
       /* Only CVSD is considered narrow band speech */
       bt_hf_callbacks->WbsCallback(
-          (p_data->val.num == BTA_AG_CODEC_CVSD) ? BTHF_WBS_NO : BTHF_WBS_YES,
+          (p_data->val.num == BTM_SCO_CODEC_CVSD) ? BTHF_WBS_NO : BTHF_WBS_YES,
           &btif_hf_cb[idx].connected_bda);
       break;
 

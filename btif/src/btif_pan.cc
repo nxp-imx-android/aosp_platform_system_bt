@@ -39,16 +39,17 @@
 #include <unistd.h>
 
 #include "bt_target.h"  // Must be first to define build configuration
-
 #include "bta/include/bta_pan_api.h"
 #include "btif/include/btif_common.h"
 #include "btif/include/btif_pan_internal.h"
 #include "btif/include/btif_sock_thread.h"
 #include "device/include/controller.h"
 #include "include/hardware/bt_pan.h"
+#include "osi/include/allocator.h"
 #include "osi/include/compat.h"
 #include "osi/include/log.h"
 #include "osi/include/osi.h"
+#include "stack/include/bt_hdr.h"
 #include "stack/include/btu.h"  // do_in_main_thread
 #include "stack/include/pan_api.h"
 

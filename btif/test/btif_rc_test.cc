@@ -17,13 +17,16 @@
 #include <base/logging.h>
 #include <gtest/gtest.h>
 #include <stdio.h>
+
 #include <cstdint>
 
 #include "bta/include/bta_av_api.h"
 #include "btif/include/btif_common.h"
+#include "common/message_loop_thread.h"
 #include "device/include/interop.h"
 #include "include/hardware/bt_rc.h"
 #include "osi/test/AllocationTestHarness.h"
+#include "stack/include/bt_hdr.h"
 #include "stack/include/btm_api_types.h"
 #include "types/raw_address.h"
 #undef LOG_TAG

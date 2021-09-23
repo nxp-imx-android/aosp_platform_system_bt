@@ -23,9 +23,8 @@
 
 #include "osi/include/future.h"
 #include "osi/include/osi.h"  // INVALID_FD
+#include "stack/include/bt_hdr.h"
 #include "stack/include/bt_types.h"
-
-static const char HCI_MODULE[] = "hci_module";
 
 ///// LEGACY DEFINITIONS /////
 

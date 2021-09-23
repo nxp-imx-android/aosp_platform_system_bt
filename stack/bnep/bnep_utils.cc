@@ -27,8 +27,8 @@
 
 #include "bnep_int.h"
 #include "bt_utils.h"
-#include "btu.h"
 #include "device/include/controller.h"
+#include "osi/include/allocator.h"
 #include "osi/include/log.h"
 #include "osi/include/osi.h"
 

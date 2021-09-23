@@ -64,7 +64,6 @@
 #include "btif_sdp.h"
 #include "btif_storage.h"
 #include "btif_util.h"
-#include "btu.h"
 #include "common/metrics.h"
 #include "device/include/controller.h"
 #include "device/include/interop.h"
@@ -1181,7 +1180,7 @@ static void btif_dm_search_devices_evt(tBTA_DM_SEARCH_EVT event,
       }
 
       {
-        bt_property_t properties[5];
+        bt_property_t properties[6];
         bt_device_type_t dev_type;
         uint32_t num_properties = 0;
         bt_status_t status;
@@ -1236,6 +1235,13 @@ static void btif_dm_search_devices_evt(tBTA_DM_SEARCH_EVT event,
         BTIF_STORAGE_FILL_PROPERTY(&properties[num_properties],
                                    BT_PROPERTY_REMOTE_RSSI, sizeof(int8_t),
                                    &(p_search_data->inq_res.rssi));
+        num_properties++;
+
+        /* CSIP supported device */
+        BTIF_STORAGE_FILL_PROPERTY(&properties[num_properties],
+                                   BT_PROPERTY_REMOTE_IS_COORDINATED_SET_MEMBER,
+                                   sizeof(bool),
+                                   &(p_search_data->inq_res.include_rsi));
         num_properties++;
 
         status =
@@ -1778,6 +1784,10 @@ static void btif_dm_upstreams_evt(uint16_t event, char* p_param) {
       local_le_features.dynamic_audio_buffer_supported =
           cmn_vsc_cb.dynamic_audio_buffer_support;
 
+      local_le_features.le_periodic_advertising_sync_transfer_sender_supported =
+          controller->supports_ble_periodic_advertising_sync_transfer_sender();
+      local_le_features.le_connected_isochronous_stream_central_supported =
+          controller->supports_ble_connected_isochronous_stream_central();
       invoke_adapter_properties_cb(BT_STATUS_SUCCESS, 1, &prop);
       break;
     }

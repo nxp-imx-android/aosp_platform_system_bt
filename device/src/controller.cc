@@ -26,6 +26,8 @@
 #include "btcore/include/module.h"
 #include "btcore/include/version.h"
 #include "check.h"
+#include "hci/include/hci_packet_factory.h"
+#include "hci/include/hci_packet_parser.h"
 #include "main/shim/controller.h"
 #include "main/shim/hci_layer.h"
 #include "main/shim/shim.h"
@@ -320,7 +322,7 @@ EXPORT_SYMBOL extern const module_t controller_module = {
     .start_up = start_up,
     .shut_down = shut_down,
     .clean_up = NULL,
-    .dependencies = {HCI_MODULE, NULL}};
+    .dependencies = {NULL}};
 
 // Interface functions
 

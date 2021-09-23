@@ -27,6 +27,7 @@
 #include <inttypes.h>
 #include <limits.h>
 #include <string.h>
+
 #include <algorithm>
 
 #include "audio_a2dp_hw/include/audio_a2dp_hw.h"
@@ -43,12 +44,14 @@
 #include "common/metrics.h"
 #include "common/repeating_timer.h"
 #include "common/time_util.h"
+#include "osi/include/allocator.h"
 #include "osi/include/fixed_queue.h"
 #include "osi/include/log.h"
 #include "osi/include/osi.h"
 #include "osi/include/wakelock.h"
 #include "stack/include/acl_api.h"
 #include "stack/include/acl_api_types.h"
+#include "stack/include/bt_hdr.h"
 #include "uipc.h"
 
 using bluetooth::common::A2dpSessionMetrics;

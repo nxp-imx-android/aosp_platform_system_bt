@@ -39,6 +39,7 @@
 #include "main/shim/btm_api.h"
 #include "main/shim/dumpsys.h"
 #include "main/shim/shim.h"
+#include "osi/include/allocator.h"
 #include "osi/include/compat.h"
 #include "osi/include/fixed_queue.h"
 #include "osi/include/log.h"
@@ -47,6 +48,7 @@
 #include "stack/btm/neighbor_inquiry.h"
 #include "stack/gatt/connection_manager.h"
 #include "stack/include/acl_api.h"
+#include "stack/include/bt_hdr.h"
 #include "stack/include/bt_types.h"
 #include "stack/include/btm_client_interface.h"
 #include "stack/include/btu.h"  // do_in_main_thread
@@ -1829,6 +1831,7 @@ static void bta_dm_inq_results_cb(tBTM_INQ_RESULTS* p_inq, uint8_t* p_eir,
   result.inq_res.inq_result_type = p_inq->inq_result_type;
   result.inq_res.device_type = p_inq->device_type;
   result.inq_res.flag = p_inq->flag;
+  result.inq_res.include_rsi = p_inq->include_rsi;
 
   /* application will parse EIR to find out remote device name */
   result.inq_res.p_eir = p_eir;

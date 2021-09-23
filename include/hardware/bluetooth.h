@@ -204,6 +204,8 @@ typedef struct {
   bool le_periodic_advertising_supported;
   uint16_t le_maximum_advertising_data_length;
   uint32_t dynamic_audio_buffer_supported;
+  bool le_periodic_advertising_sync_transfer_sender_supported;
+  bool le_connected_isochronous_stream_central_supported;
 } bt_local_le_features_t;
 
 /* Stored the default/maximum/minimum buffer time for dynamic audio buffer.
@@ -324,6 +326,13 @@ typedef enum {
   BT_PROPERTY_LOCAL_IO_CAPS_BLE,
 
   BT_PROPERTY_DYNAMIC_AUDIO_BUFFER,
+
+  /**
+   * Description - True if Remote is a Member of a Coordinated Set.
+   * Access mode - GET.
+   * Data Type - bool.
+   */
+  BT_PROPERTY_REMOTE_IS_COORDINATED_SET_MEMBER,
 
   BT_PROPERTY_REMOTE_DEVICE_TIMESTAMP = 0xFF,
 } bt_property_type_t;
