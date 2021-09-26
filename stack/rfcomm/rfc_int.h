@@ -29,10 +29,12 @@
 #include <cstring>
 #include <unordered_map>
 
+#include "stack/include/bt_hdr.h"
 #include "stack/include/btm_status.h"
 #include "stack/include/l2c_api.h"
 #include "stack/rfcomm/port_int.h"
 #include "stack/rfcomm/rfc_event.h"
+#include "types/raw_address.h"
 
 /*
  * Define RFCOMM result codes

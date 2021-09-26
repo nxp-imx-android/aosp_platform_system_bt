@@ -17,12 +17,16 @@
 #pragma once
 
 #include <gmock/gmock.h>
+
 #include <type_traits>
 
 #include "avrcp.h"
 #include "avrcp_internal.h"
 #include "avrcp_packet.h"
+#include "stack/include/bt_hdr.h"
 #include "tests/packet_test_helper.h"
+#include "types/bluetooth/uuid.h"
+#include "types/raw_address.h"
 
 namespace bluetooth {
 namespace avrcp {

@@ -33,7 +33,9 @@
 #include "bta/sys/bta_sys.h"
 #include "osi/include/list.h"
 #include "stack/include/avdt_api.h"
+#include "stack/include/bt_hdr.h"
 #include "stack/include/bt_types.h"
+#include "types/raw_address.h"
 
 #define CASE_RETURN_TEXT(code) \
   case code:                   \

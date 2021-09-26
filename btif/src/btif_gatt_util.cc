@@ -21,12 +21,11 @@
 #include "btif_gatt_util.h"
 
 #include <errno.h>
+#include <hardware/bluetooth.h>
+#include <hardware/bt_gatt.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-
-#include <hardware/bluetooth.h>
-#include <hardware/bt_gatt.h>
 
 #include "bta_api.h"
 #include "bta_gatt_api.h"
@@ -40,7 +39,9 @@
 #include "osi/include/allocator.h"
 #include "osi/include/osi.h"
 #include "stack/btm/btm_sec.h"
+#include "types/bluetooth/uuid.h"
 #include "types/bt_transport.h"
+#include "types/raw_address.h"
 
 using bluetooth::Uuid;
 

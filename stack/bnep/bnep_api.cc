@@ -23,11 +23,16 @@
  ******************************************************************************/
 
 #include "bnep_api.h"
+
 #include <string.h>
+
 #include "bnep_int.h"
 #include "bta/include/bta_api.h"
 #include "osi/include/allocator.h"
 #include "stack/btm/btm_sec.h"
+#include "stack/include/bt_hdr.h"
+#include "types/bluetooth/uuid.h"
+#include "types/raw_address.h"
 
 using bluetooth::Uuid;
 

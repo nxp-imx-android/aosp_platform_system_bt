@@ -14,14 +14,14 @@
  * limitations under the License.
  */
 
-#include <algorithm>
-#include <iostream>
-
 #include <base/bind.h>
 #include <base/logging.h>
 #include <base/threading/thread.h>
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
+
+#include <algorithm>
+#include <iostream>
 
 #include "avrcp_packet.h"
 #include "avrcp_test_helper.h"
@@ -29,6 +29,7 @@
 #include "stack_config.h"
 #include "tests/avrcp/avrcp_test_packets.h"
 #include "tests/packet_test_helper.h"
+#include "types/raw_address.h"
 
 namespace bluetooth {
 namespace avrcp {
@@ -1349,6 +1350,19 @@ TEST_F(AvrcpDeviceTest, volumeRejectedTest) {
   SendMessage(1, response);
 
   EXPECT_CALL(response_cb, Call(_, _, _)).Times(0);
+}
+
+TEST_F(AvrcpDeviceTest, setVolumeOnceTest) {
+  int vol = 0x48;
+
+  auto set_abs_vol = SetAbsoluteVolumeRequestBuilder::MakeBuilder(vol);
+
+  // Ensure that SetVolume only been call once.
+  EXPECT_CALL(response_cb, Call(_, false, matchPacket(std::move(set_abs_vol))))
+      .Times(1);
+
+  test_device->SetVolume(vol);
+  test_device->SetVolume(vol);
 }
 
 TEST_F(AvrcpDeviceTest, playPushedActiveDeviceTest) {

@@ -28,9 +28,11 @@
 #include <memory>
 
 #include "bt_target.h"  // Must be first to define build configuration
-
 #include "bta/include/bta_api.h"
+#include "stack/include/bt_hdr.h"
 #include "stack/include/l2c_api.h"
+#include "types/bluetooth/uuid.h"
+#include "types/raw_address.h"
 
 /*****************************************************************************
  *  Constants and data types

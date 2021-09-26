@@ -26,11 +26,13 @@
 #include "internal_include/stack_config.h"
 #include "stack/btm/btm_int_types.h"
 #include "stack/include/acl_api.h"
+#include "stack/include/bt_octets.h"
 #include "stack/include/smp_api.h"
 #include "stack/smp/p_256_ecc_pp.h"
 #include "stack/smp/smp_int.h"
 #include "test/mock/mock_stack_acl.h"
 #include "types/hci_role.h"
+#include "types/raw_address.h"
 
 tBTM_CB btm_cb;
 std::map<std::string, int> mock_function_count_map;

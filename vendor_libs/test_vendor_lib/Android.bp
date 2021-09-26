@@ -55,8 +55,10 @@ cc_library_static {
         ":BluetoothHciClassSources",
     ],
     cflags: [
+        "-Wall",
+        "-Wextra",
+        "-Werror",
         "-fvisibility=hidden",
-        "-DHAS_NO_BDROID_BUILDCFG",
     ],
     local_include_dirs: [
         "include",

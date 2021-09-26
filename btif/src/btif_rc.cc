@@ -43,7 +43,6 @@
 #include "btif_av.h"
 #include "btif_common.h"
 #include "btif_util.h"
-#include "btu.h"
 #include "device/include/interop.h"
 #include "osi/include/alarm.h"
 #include "osi/include/allocator.h"
@@ -52,6 +51,8 @@
 #include "osi/include/osi.h"
 #include "osi/include/properties.h"
 #include "stack/include/avrc_api.h"
+#include "stack/include/bt_hdr.h"
+#include "types/raw_address.h"
 
 #define RC_INVALID_TRACK_ID (0xFFFFFFFFFFFFFFFFULL)
 

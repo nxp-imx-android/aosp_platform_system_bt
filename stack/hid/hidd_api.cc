@@ -23,17 +23,20 @@
  *
  ******************************************************************************/
 
+#include "hidd_api.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
 #include "btm_api.h"
-#include "btu.h"
-#include "hidd_api.h"
 #include "hidd_int.h"
 #include "hiddefs.h"
 #include "osi/include/allocator.h"
 #include "stack/btm/btm_sec.h"
+#include "stack/include/bt_types.h"
+#include "types/bluetooth/uuid.h"
+#include "types/raw_address.h"
 
 tHID_DEV_CTB hd_cb;
 

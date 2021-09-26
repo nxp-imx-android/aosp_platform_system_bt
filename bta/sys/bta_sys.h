@@ -25,13 +25,16 @@
 #define BTA_SYS_H
 
 #include <base/time/time.h>
+
 #include <cstdint>
 
 #include "bt_target.h"  // Must be first to define build configuration
-
 #include "osi/include/alarm.h"
+#include "stack/include/bt_hdr.h"
 #include "stack/include/hci_error_code.h"
+#include "types/bluetooth/uuid.h"
 #include "types/hci_role.h"
+#include "types/raw_address.h"
 
 /*****************************************************************************
  *  Constants and data types

@@ -35,7 +35,9 @@
 #include "stack/btm/btm_sec.h"
 #include "stack/eatt/eatt.h"
 #include "stack/gatt/gatt_int.h"
+#include "stack/include/bt_hdr.h"
 #include "stack/include/l2cap_acl_interface.h"
+#include "types/raw_address.h"
 
 using base::StringPrintf;
 using bluetooth::eatt::EattExtension;

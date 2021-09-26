@@ -34,31 +34,27 @@ extern std::map<std::string, int> mock_function_count_map;
 //       still applies, but crafting proper inclusion is out of scope
 //       for this effort.  This compilation unit may compile as-is, or
 //       may need attention to prune the inclusion set.
-#include "gd/module.h"
-
 #include <future>
 #include <unordered_map>
 #include <unordered_set>
+
 #include "bta/include/bta_dm_acl.h"
-#include "gd/l2cap/classic/l2cap_classic_module.h"
-#include "gd/l2cap/le/l2cap_le_module.h"
 #include "gd/os/log.h"
 #include "gd/os/queue.h"
 #include "main/shim/acl_api.h"
-#include "main/shim/btm.h"
 #include "main/shim/entry.h"
 #include "main/shim/helpers.h"
 #include "main/shim/l2c_api.h"
-#include "main/shim/stack.h"
 #include "osi/include/allocator.h"
 #include "stack/btm/btm_ble_int.h"
 #include "stack/btm/btm_sec.h"
 #include "stack/include/acl_hci_link_interface.h"
 #include "stack/include/ble_acl_interface.h"
+#include "stack/include/bt_hdr.h"
 #include "stack/include/btm_api.h"
-#include "stack/include/btu.h"
 #include "stack/include/gatt_api.h"
 #include "stack/include/sco_hci_link_interface.h"
+#include "types/raw_address.h"
 
 // Mocked compile conditionals, if any
 #ifndef UNUSED_ATTR

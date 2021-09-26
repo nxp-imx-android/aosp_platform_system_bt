@@ -35,6 +35,9 @@
 #include "gd/common/init_flags.h"
 #include "osi/include/log.h"
 #include "osi/include/osi.h"
+#include "stack/include/bt_types.h"
+#include "types/bluetooth/uuid.h"
+#include "types/raw_address.h"
 
 using base::StringPrintf;
 using bluetooth::Uuid;
@@ -365,8 +368,6 @@ static void gatt_connect_cback(UNUSED_ATTR tGATT_IF gatt_if,
  *
  ******************************************************************************/
 void gatt_profile_db_init(void) {
-  uint16_t service_handle = 0;
-
   /* Fill our internal UUID with a fixed pattern 0x81 */
   std::array<uint8_t, Uuid::kNumBytes128> tmp;
   tmp.fill(0x81);
@@ -416,7 +417,6 @@ void gatt_profile_db_init(void) {
   GATTS_AddService(gatt_cb.gatt_if, service,
                    sizeof(service) / sizeof(btgatt_db_element_t));
 
-  service_handle = service[0].attribute_handle;
   gatt_cb.handle_of_h_r = service[1].attribute_handle;
   gatt_cb.handle_sr_supported_feat = service[2].attribute_handle;
   gatt_cb.handle_cl_supported_feat = service[3].attribute_handle;

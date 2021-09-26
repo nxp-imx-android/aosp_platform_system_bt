@@ -44,10 +44,12 @@
 #include "stack/btm/btm_int.h"
 #include "stack/btm/btm_int_types.h"
 #include "stack/include/acl_api.h"
+#include "stack/include/bt_hdr.h"
 #include "stack/include/btm_api.h"
 #include "stack/include/btm_ble_api.h"
-#include "stack/include/btu.h"
 #include "stack/include/inq_hci_link_interface.h"
+#include "types/bluetooth/uuid.h"
+#include "types/raw_address.h"
 
 extern tBTM_CB btm_cb;
 

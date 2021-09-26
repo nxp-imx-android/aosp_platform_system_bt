@@ -48,10 +48,12 @@
 #include "osi/include/properties.h"
 #include "stack/include/a2dp_sbc.h"
 #include "stack/include/acl_api.h"
+#include "stack/include/bt_hdr.h"
 #include "stack/include/btm_api.h"
 #include "stack/include/btm_client_interface.h"
 #include "stack/include/l2c_api.h"
 #include "types/hci_role.h"
+#include "types/raw_address.h"
 
 namespace {
 

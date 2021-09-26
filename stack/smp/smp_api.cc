@@ -22,23 +22,24 @@
  *  applications that can run over an SMP.
  *
  ******************************************************************************/
+#include "smp_api.h"
+
 #include <base/logging.h>
 #include <string.h>
 
 #include "bt_target.h"
 #include "bt_utils.h"
-#include "stack_config.h"
-
 #include "gd/os/log.h"
 #include "gd/os/rand.h"
 #include "l2c_api.h"
 #include "l2cdefs.h"
 #include "main/shim/shim.h"
-#include "smp_api.h"
+#include "p_256_ecc_pp.h"
 #include "smp_int.h"
 #include "stack/btm/btm_dev.h"
-
-#include "p_256_ecc_pp.h"
+#include "stack/include/bt_octets.h"
+#include "stack_config.h"
+#include "types/raw_address.h"
 
 /*******************************************************************************
  *
@@ -231,12 +232,6 @@ bool SMP_PairCancel(const RawAddress& bd_addr) {
       << "Legacy SMP API should not be invoked when GD Security is used";
 
   tSMP_CB* p_cb = &smp_cb;
-  uint8_t err_code = SMP_PAIR_FAIL_UNKNOWN;
-
-  // PTS SMP failure test cases
-  if (p_cb->cert_failure == SMP_PASSKEY_ENTRY_FAIL ||
-      p_cb->cert_failure == SMP_NUMERIC_COMPAR_FAIL)
-    err_code = p_cb->cert_failure;
 
   SMP_TRACE_EVENT("SMP_CancelPair state=%d flag=0x%x ", p_cb->state,
                   p_cb->flags);

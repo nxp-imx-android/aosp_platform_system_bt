@@ -22,7 +22,9 @@
 #include "btm_api.h"
 #include "l2c_api.h"
 #include "profiles_api.h"
+#include "stack/include/bt_hdr.h"
 #include "types/bt_transport.h"
+#include "types/raw_address.h"
 
 /*****************************************************************************
  *  Constants

@@ -31,6 +31,10 @@
 
 #include <base/bind.h>
 #include <base/logging.h>
+#include <bluetooth/uuid.h>
+#include <hardware/bluetooth.h>
+#include <hardware/bt_csis.h>
+#include <hardware/bt_hearing_aid.h>
 #include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -40,11 +44,6 @@
 #include <unistd.h>
 
 #include <mutex>
-
-#include <bluetooth/uuid.h>
-#include <hardware/bluetooth.h>
-#include <hardware/bt_csis.h>
-#include <hardware/bt_hearing_aid.h>
 
 #include "advertise_data_parser.h"
 #include "bta_csis_api.h"
@@ -64,7 +63,6 @@
 #include "btif_sdp.h"
 #include "btif_storage.h"
 #include "btif_util.h"
-#include "btu.h"
 #include "common/metrics.h"
 #include "device/include/controller.h"
 #include "device/include/interop.h"
@@ -76,7 +74,9 @@
 #include "osi/include/properties.h"
 #include "stack/btm/btm_dev.h"
 #include "stack/btm/btm_sec.h"
+#include "stack/include/bt_octets.h"
 #include "stack_config.h"
+#include "types/raw_address.h"
 
 using bluetooth::Uuid;
 /******************************************************************************
@@ -486,7 +486,6 @@ static void bond_state_changed(bt_status_t status, const RawAddress& bd_addr,
     pairing_cb.bd_addr = bd_addr;
   } else {
     pairing_cb = {};
-    bta_dm_execute_queued_request();
   }
 }
 
@@ -1352,7 +1351,6 @@ static void btif_dm_search_services_evt(tBTA_DM_SEARCH_EVT event,
         // Both SDP and bonding are done, clear pairing control block in case
         // it is not already cleared
         pairing_cb = {};
-        bta_dm_execute_queued_request();
 
         // Send one empty UUID to Java to unblock pairing intent when SDP failed
         // or no UUID is discovered
@@ -1785,6 +1783,10 @@ static void btif_dm_upstreams_evt(uint16_t event, char* p_param) {
       local_le_features.dynamic_audio_buffer_supported =
           cmn_vsc_cb.dynamic_audio_buffer_support;
 
+      local_le_features.le_periodic_advertising_sync_transfer_sender_supported =
+          controller->supports_ble_periodic_advertising_sync_transfer_sender();
+      local_le_features.le_connected_isochronous_stream_central_supported =
+          controller->supports_ble_connected_isochronous_stream_central();
       invoke_adapter_properties_cb(BT_STATUS_SUCCESS, 1, &prop);
       break;
     }

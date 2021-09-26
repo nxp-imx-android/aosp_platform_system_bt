@@ -3,15 +3,18 @@ use std::sync::{Arc, Mutex};
 
 use num_traits::cast::FromPrimitive;
 
+use crate::callbacks::BtGattCallback;
 use crate::ClientContext;
 use crate::{console_red, console_yellow, print_error, print_info};
 use btstack::bluetooth::{BluetoothDevice, BluetoothTransport, IBluetooth};
+use btstack::bluetooth_gatt::IBluetoothGatt;
 use manager_service::iface_bluetooth_manager::IBluetoothManager;
 
 const INDENT_CHAR: &str = " ";
 const BAR1_CHAR: &str = "=";
 const BAR2_CHAR: &str = "-";
 const MAX_MENU_CHAR_WIDTH: usize = 72;
+const GATT_CLIENT_APP_UUID: &str = "12345678123456781234567812345678";
 
 type CommandFunction = fn(&mut CommandHandler, &Vec<String>);
 
@@ -88,6 +91,13 @@ fn build_commands() -> HashMap<String, CommandOption> {
         },
     );
     command_options.insert(
+        String::from("gatt"),
+        CommandOption {
+            description: String::from("GATT tools"),
+            function_pointer: CommandHandler::cmd_gatt,
+        },
+    );
+    command_options.insert(
         String::from("get-address"),
         CommandOption {
             description: String::from("Gets the local device address."),
@@ -102,10 +112,10 @@ fn build_commands() -> HashMap<String, CommandOption> {
         },
     );
     command_options.insert(
-        String::from("list-devices"),
+        String::from("list"),
         CommandOption {
             description: String::from(
-                "List known remote devices from most recent discovery session.",
+                "List bonded or found remote devices. Use: list <bonded|found>",
             ),
             function_pointer: CommandHandler::cmd_list_devices,
         },
@@ -229,10 +239,8 @@ impl CommandHandler {
             return;
         }
 
-        let address = self.context.lock().unwrap().adapter_dbus.as_ref().unwrap().get_address();
+        let address = self.context.lock().unwrap().update_adapter_address();
         print_info!("Local address = {}", &address);
-        // Cache address for adapter show
-        self.context.lock().unwrap().adapter_address = Some(address);
     }
 
     fn cmd_discovery(&mut self, args: &Vec<String>) {
@@ -276,16 +284,129 @@ impl CommandHandler {
         });
     }
 
+    fn cmd_gatt(&mut self, args: &Vec<String>) {
+        if !self.context.lock().unwrap().adapter_ready {
+            self.adapter_not_ready();
+            return;
+        }
+
+        enforce_arg_len(args, 1, "gatt <commands>", || match &args[0][0..] {
+            "register-client" => {
+                self.context.lock().unwrap().gatt_dbus.as_mut().unwrap().register_client(
+                    String::from(GATT_CLIENT_APP_UUID),
+                    Box::new(BtGattCallback::new(
+                        String::from("/org/chromium/bluetooth/client/bluetooth_gatt_callback"),
+                        self.context.clone(),
+                    )),
+                    false,
+                );
+            }
+            "client-connect" => {
+                if args.len() < 2 {
+                    println!("usage: gatt client-connect <addr>");
+                    return;
+                }
+
+                let client_id = self.context.lock().unwrap().gatt_client_id;
+                if client_id.is_none() {
+                    println!("GATT client is not yet registered.");
+                    return;
+                }
+
+                let addr = String::from(&args[1]);
+                self.context.lock().unwrap().gatt_dbus.as_ref().unwrap().client_connect(
+                    client_id.unwrap(),
+                    addr,
+                    false,
+                    2,
+                    false,
+                    1,
+                );
+            }
+            "client-read-phy" => {
+                if args.len() < 2 {
+                    println!("usage: gatt client-read-phy <addr>");
+                    return;
+                }
+
+                let client_id = self.context.lock().unwrap().gatt_client_id;
+                if client_id.is_none() {
+                    println!("GATT client is not yet registered.");
+                    return;
+                }
+
+                let addr = String::from(&args[1]);
+                self.context
+                    .lock()
+                    .unwrap()
+                    .gatt_dbus
+                    .as_mut()
+                    .unwrap()
+                    .client_read_phy(client_id.unwrap(), addr);
+            }
+            "client-discover-services" => {
+                if args.len() < 2 {
+                    println!("usage: gatt client-discover-services <addr>");
+                    return;
+                }
+
+                let client_id = self.context.lock().unwrap().gatt_client_id;
+                if client_id.is_none() {
+                    println!("GATT client is not yet registered.");
+                    return;
+                }
+
+                let addr = String::from(&args[1]);
+                self.context
+                    .lock()
+                    .unwrap()
+                    .gatt_dbus
+                    .as_ref()
+                    .unwrap()
+                    .discover_services(client_id.unwrap(), addr);
+            }
+            _ => {
+                println!("Invalid argument '{}'", args[0]);
+            }
+        });
+    }
+
     /// Get the list of currently supported commands
     pub fn get_command_list(&self) -> Vec<String> {
         self.command_options.keys().map(|key| String::from(key)).collect::<Vec<String>>()
     }
 
-    fn cmd_list_devices(&mut self, _args: &Vec<String>) {
-        print_info!("Devices found in most recent discovery session:");
-        for (key, val) in self.context.lock().unwrap().found_devices.iter() {
-            print_info!("[{:18}] {}", key, val.name);
+    fn cmd_list_devices(&mut self, args: &Vec<String>) {
+        if !self.context.lock().unwrap().adapter_ready {
+            self.adapter_not_ready();
+            return;
         }
+
+        enforce_arg_len(args, 1, "list <bonded|found>", || match &args[0][0..] {
+            "bonded" => {
+                print_info!("Known bonded devices:");
+                let devices = self
+                    .context
+                    .lock()
+                    .unwrap()
+                    .adapter_dbus
+                    .as_ref()
+                    .unwrap()
+                    .get_bonded_devices();
+                for device in devices.iter() {
+                    print_info!("[{:17}] {}", device.address, device.name);
+                }
+            }
+            "found" => {
+                print_info!("Devices found in most recent discovery session:");
+                for (key, val) in self.context.lock().unwrap().found_devices.iter() {
+                    print_info!("[{:17}] {}", key, val.name);
+                }
+            }
+            _ => {
+                println!("Invalid argument '{}'", args[0]);
+            }
+        });
     }
 }
 

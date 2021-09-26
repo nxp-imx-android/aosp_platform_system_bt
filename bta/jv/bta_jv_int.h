@@ -28,7 +28,10 @@
 #include <unordered_set>
 
 #include "bta/include/bta_jv_api.h"
+#include "stack/include/bt_hdr.h"
 #include "stack/include/rfcdefs.h"
+#include "types/bluetooth/uuid.h"
+#include "types/raw_address.h"
 
 /*****************************************************************************
  *  Constants

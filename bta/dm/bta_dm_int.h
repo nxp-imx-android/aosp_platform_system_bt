@@ -25,15 +25,19 @@
 #define BTA_DM_INT_H
 
 #include <base/strings/stringprintf.h>
+
 #include <memory>
 #include <string>
 
 #include "bt_target.h"  // Must be first to define build configuration
-
 #include "bta/include/bta_api.h"
 #include "bta/include/bta_gatt_api.h"
 #include "bta/sys/bta_sys.h"
 #include "main/shim/dumpsys.h"
+#include "stack/include/bt_hdr.h"
+#include "stack/include/bt_octets.h"
+#include "types/bluetooth/uuid.h"
+#include "types/raw_address.h"
 
 #ifndef CASE_RETURN_TEXT
 #define CASE_RETURN_TEXT(code) \
@@ -544,7 +548,6 @@ extern void bta_dm_queue_disc(tBTA_DM_MSG* p_data);
 extern void bta_dm_execute_queued_request();
 extern bool bta_dm_is_search_request_queued();
 extern void bta_dm_search_clear_queue();
-extern void bta_dm_search_cancel_cmpl();
 extern void bta_dm_search_cancel_notify();
 extern void bta_dm_disc_rmt_name(tBTA_DM_MSG* p_data);
 extern tBTA_DM_PEER_DEVICE* bta_dm_find_peer_device(

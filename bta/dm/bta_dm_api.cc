@@ -23,14 +23,15 @@
  ******************************************************************************/
 
 #include <base/bind.h>
+
 #include <vector>
 
 #include "bt_target.h"  // Must be first to define build configuration
-
 #include "bta/dm/bta_dm_int.h"
 #include "osi/include/allocator.h"
 #include "osi/include/compat.h"
 #include "stack/btm/btm_sec.h"
+#include "stack/include/bt_octets.h"
 #include "stack/include/btm_api.h"
 #include "stack/include/btu.h"  // do_in_main_thread
 #include "types/bluetooth/uuid.h"
@@ -104,6 +105,8 @@ void BTA_DmSearch(tBTA_DM_SEARCH_CBACK* p_cback, bool is_bonding_or_sdp) {
  *
  ******************************************************************************/
 void BTA_DmSearchCancel(void) {
+  bta_dm_search_clear_queue();
+
   switch (bta_dm_search_get_state()) {
     case BTA_DM_SEARCH_IDLE:
       bta_dm_search_cancel_notify();
@@ -113,7 +116,6 @@ void BTA_DmSearchCancel(void) {
       bta_dm_search_cancel();
       break;
     case BTA_DM_SEARCH_CANCELLING:
-      bta_dm_search_clear_queue();
       bta_dm_search_cancel_notify();
       break;
     case BTA_DM_DISCOVER_ACTIVE:

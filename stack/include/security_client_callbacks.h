@@ -16,9 +16,11 @@
 
 #pragma once
 
+#include "stack/include/bt_octets.h"
 #include "stack/include/btm_api_types.h"
 #include "stack/include/btm_ble_api_types.h"
 #include "stack/include/hci_error_code.h"
+#include "types/raw_address.h"
 
 /****************************************
  *  Security Manager Callback Functions
