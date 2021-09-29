@@ -25,6 +25,8 @@
 
 #include "avrc_api.h"
 #include "avrc_int.h"
+#include "types/bluetooth/uuid.h"
+#include "types/raw_address.h"
 
 using bluetooth::Uuid;
 

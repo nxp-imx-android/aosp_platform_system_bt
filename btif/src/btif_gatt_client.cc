@@ -50,7 +50,9 @@
 #include "stack/include/acl_api.h"
 #include "stack/include/acl_api_types.h"
 #include "stack/include/btu.h"
+#include "types/bluetooth/uuid.h"
 #include "types/bt_transport.h"
+#include "types/raw_address.h"
 #include "vendor_api.h"
 
 using base::Bind;

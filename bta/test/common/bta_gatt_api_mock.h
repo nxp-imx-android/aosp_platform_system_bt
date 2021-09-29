@@ -20,6 +20,8 @@
 #include <gmock/gmock.h>
 
 #include "bta_gatt_api.h"
+#include "types/bluetooth/uuid.h"
+#include "types/raw_address.h"
 
 namespace gatt {
 

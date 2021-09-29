@@ -17,7 +17,10 @@
  ******************************************************************************/
 
 #include "gatt/gatt_test.h"
+
 #include "adapter/bluetooth_test.h"
+#include "types/bluetooth/uuid.h"
+#include "types/raw_address.h"
 
 namespace bttest {
 

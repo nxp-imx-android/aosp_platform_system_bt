@@ -20,6 +20,8 @@
 #include "stack/include/avrc_api.h"
 #include "stack/include/bt_hdr.h"
 #include "stack/include/sdp_api.h"
+#include "types/bluetooth/uuid.h"
+#include "types/raw_address.h"
 
 /**
  * Wrapper classes for the API functions currently defined in "system/bt/stack".

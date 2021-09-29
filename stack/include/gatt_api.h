@@ -19,12 +19,16 @@
 #define GATT_API_H
 
 #include <base/strings/stringprintf.h>
+
+#include <cstdint>
 #include <string>
 
 #include "bt_target.h"
 #include "btm_ble_api.h"
 #include "gattdefs.h"
+#include "types/bluetooth/uuid.h"
 #include "types/bt_transport.h"
+#include "types/raw_address.h"
 
 /*****************************************************************************
  *  Constants

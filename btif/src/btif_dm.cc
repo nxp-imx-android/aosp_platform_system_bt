@@ -31,6 +31,10 @@
 
 #include <base/bind.h>
 #include <base/logging.h>
+#include <bluetooth/uuid.h>
+#include <hardware/bluetooth.h>
+#include <hardware/bt_csis.h>
+#include <hardware/bt_hearing_aid.h>
 #include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -40,11 +44,6 @@
 #include <unistd.h>
 
 #include <mutex>
-
-#include <bluetooth/uuid.h>
-#include <hardware/bluetooth.h>
-#include <hardware/bt_csis.h>
-#include <hardware/bt_hearing_aid.h>
 
 #include "advertise_data_parser.h"
 #include "bta_csis_api.h"
@@ -75,7 +74,9 @@
 #include "osi/include/properties.h"
 #include "stack/btm/btm_dev.h"
 #include "stack/btm/btm_sec.h"
+#include "stack/include/bt_octets.h"
 #include "stack_config.h"
+#include "types/raw_address.h"
 
 using bluetooth::Uuid;
 /******************************************************************************
@@ -485,7 +486,6 @@ static void bond_state_changed(bt_status_t status, const RawAddress& bd_addr,
     pairing_cb.bd_addr = bd_addr;
   } else {
     pairing_cb = {};
-    bta_dm_execute_queued_request();
   }
 }
 
@@ -1155,7 +1155,8 @@ static void btif_dm_search_devices_evt(tBTA_DM_SEARCH_EVT event,
       /* inquiry result */
       bt_bdname_t bdname;
       uint8_t remote_name_len;
-      tBTA_SERVICE_MASK services = 0;
+      uint8_t num_uuids = 0, max_num_uuid = 32;
+      uint8_t uuid_list[32 * Uuid::kNumBytes16];
 
       p_search_data->inq_res.remt_name_not_required =
           check_eir_remote_name(p_search_data, NULL, NULL);
@@ -1169,14 +1170,11 @@ static void btif_dm_search_devices_evt(tBTA_DM_SEARCH_EVT event,
       if (!check_eir_remote_name(p_search_data, bdname.name, &remote_name_len))
         check_cached_remote_name(p_search_data, bdname.name, &remote_name_len);
 
-      /* Check EIR for remote name and services */
+      /* Check EIR for services */
       if (p_search_data->inq_res.p_eir) {
-        BTA_GetEirService(p_search_data->inq_res.p_eir,
-                          p_search_data->inq_res.eir_len, &services);
-        BTIF_TRACE_DEBUG("%s()EIR BTA services = %08X", __func__,
-                         (uint32_t)services);
-        /* TODO:  Get the service list and check to see which uuids we got and
-         * send it back to the client. */
+        BTM_GetEirUuidList(p_search_data->inq_res.p_eir,
+                           p_search_data->inq_res.eir_len, Uuid::kNumBytes16,
+                           &num_uuids, uuid_list, max_num_uuid);
       }
 
       {
@@ -1243,6 +1241,21 @@ static void btif_dm_search_devices_evt(tBTA_DM_SEARCH_EVT event,
                                    sizeof(bool),
                                    &(p_search_data->inq_res.include_rsi));
         num_properties++;
+
+        /* EIR queried services */
+        if (num_uuids > 0) {
+          uint16_t* p_uuid16 = (uint16_t*)uuid_list;
+          std::vector<Uuid> uuid128_list;
+          for (int i = 0; i < num_uuids; ++i) {
+            Uuid uuid = Uuid::From16Bit(p_uuid16[i]);
+            uuid128_list.push_back(uuid);
+          }
+
+          BTIF_STORAGE_FILL_PROPERTY(
+              &properties[num_properties], BT_PROPERTY_UUIDS,
+              num_uuids * Uuid::kNumBytes128, uuid128_list.data());
+          num_properties++;
+        }
 
         status =
             btif_storage_add_remote_device(&bdaddr, num_properties, properties);
@@ -1351,7 +1364,6 @@ static void btif_dm_search_services_evt(tBTA_DM_SEARCH_EVT event,
         // Both SDP and bonding are done, clear pairing control block in case
         // it is not already cleared
         pairing_cb = {};
-        bta_dm_execute_queued_request();
 
         // Send one empty UUID to Java to unblock pairing intent when SDP failed
         // or no UUID is discovered
@@ -2248,7 +2260,9 @@ void btif_dm_get_remote_services(RawAddress remote_addr, const int transport) {
                    remote_addr.ToString().c_str());
 
   BTA_DmDiscover(remote_addr, btif_dm_search_services_evt, transport,
-                 remote_addr != pairing_cb.bd_addr && is_bonding_or_sdp());
+                 remote_addr != pairing_cb.bd_addr &&
+                     remote_addr != pairing_cb.static_bdaddr &&
+                     is_bonding_or_sdp());
 }
 
 void btif_dm_enable_service(tBTA_SERVICE_ID service_id, bool enable) {

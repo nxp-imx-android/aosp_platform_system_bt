@@ -35,6 +35,9 @@
 #include "gd/common/init_flags.h"
 #include "osi/include/log.h"
 #include "osi/include/osi.h"
+#include "stack/include/bt_types.h"
+#include "types/bluetooth/uuid.h"
+#include "types/raw_address.h"
 
 using base::StringPrintf;
 using bluetooth::Uuid;

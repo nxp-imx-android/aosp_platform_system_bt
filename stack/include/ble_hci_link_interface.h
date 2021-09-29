@@ -17,7 +17,10 @@
 
 #pragma once
 
+#include <cstdint>
+
 #include "osi/include/osi.h"  // UNUSED_ATTR
+#include "types/raw_address.h"
 
 // This header contains functions for HCI-ble to invoke
 void btm_ble_conn_complete(uint8_t* p, UNUSED_ATTR uint16_t evt_len,

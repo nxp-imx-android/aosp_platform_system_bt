@@ -37,6 +37,7 @@
 #include "stack/gatt/gatt_int.h"
 #include "stack/include/bt_hdr.h"
 #include "stack/include/l2cap_acl_interface.h"
+#include "types/raw_address.h"
 
 using base::StringPrintf;
 using bluetooth::eatt::EattExtension;
@@ -67,20 +68,19 @@ static void gatt_send_conn_cback(tGATT_TCB* p_tcb);
 static void gatt_l2cif_congest_cback(uint16_t cid, bool congested);
 static void gatt_on_l2cap_error(uint16_t lcid, uint16_t result);
 
-static const tL2CAP_APPL_INFO dyn_info = {
-    gatt_l2cif_connect_ind_cback,
-    gatt_l2cif_connect_cfm_cback,
-    gatt_l2cif_config_ind_cback,
-    gatt_l2cif_config_cfm_cback,
-    gatt_l2cif_disconnect_ind_cback,
-    gatt_l2cif_data_ind_cback,
-    gatt_l2cif_congest_cback,
-    NULL,
-    gatt_on_l2cap_error,
-    NULL,
-    NULL,
-    NULL
-};
+static const tL2CAP_APPL_INFO dyn_info = {gatt_l2cif_connect_ind_cback,
+                                          gatt_l2cif_connect_cfm_cback,
+                                          gatt_l2cif_config_ind_cback,
+                                          gatt_l2cif_config_cfm_cback,
+                                          gatt_l2cif_disconnect_ind_cback,
+                                          NULL,
+                                          gatt_l2cif_data_ind_cback,
+                                          gatt_l2cif_congest_cback,
+                                          NULL,
+                                          gatt_on_l2cap_error,
+                                          NULL,
+                                          NULL,
+                                          NULL};
 
 tGATT_CB gatt_cb;
 

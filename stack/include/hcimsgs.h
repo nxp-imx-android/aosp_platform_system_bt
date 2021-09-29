@@ -21,10 +21,14 @@
 
 #include <base/callback_forward.h>
 
+#include <cstdint>
+
 #include "bt_target.h"
 #include "device/include/esco_parameters.h"
 #include "stack/include/bt_hdr.h"
+#include "stack/include/bt_octets.h"
 #include "types/ble_address_with_type.h"
+#include "types/raw_address.h"
 
 void bte_main_hci_send(BT_HDR* p_msg, uint16_t event);
 

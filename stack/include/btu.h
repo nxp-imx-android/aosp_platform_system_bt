@@ -31,8 +31,11 @@
 #include <base/location.h>
 #include <base/threading/thread.h>
 
+#include <cstdint>
+
 #include "bt_target.h"
 #include "common/message_loop_thread.h"
+#include "include/hardware/bluetooth.h"
 #include "osi/include/alarm.h"
 #include "stack/include/bt_hdr.h"
 

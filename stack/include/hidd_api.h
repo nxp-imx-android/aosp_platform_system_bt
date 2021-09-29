@@ -19,9 +19,12 @@
 #ifndef HIDD_API_H
 #define HIDD_API_H
 
+#include <cstdint>
+
 #include "stack/include/bt_hdr.h"
 #include "stack/include/hiddefs.h"
 #include "stack/include/sdp_api.h"
+#include "types/raw_address.h"
 
 /*****************************************************************************
  *  Type Definitions

@@ -30,6 +30,7 @@
 #include "osi/include/allocator.h"
 #include "osi/include/osi.h"
 #include "stack/include/bt_hdr.h"
+#include "types/raw_address.h"
 
 /* callback function declarations */
 void avct_l2c_connect_ind_cback(const RawAddress& bd_addr, uint16_t lcid,
@@ -45,12 +46,19 @@ static void avct_on_l2cap_error(uint16_t lcid, uint16_t result);
 
 /* L2CAP callback function structure */
 const tL2CAP_APPL_INFO avct_l2c_appl = {
-    avct_l2c_connect_ind_cback,    avct_l2c_connect_cfm_cback,
-    avct_l2c_config_ind_cback,     avct_l2c_config_cfm_cback,
-    avct_l2c_disconnect_ind_cback, avct_l2c_data_ind_cback,
-    avct_l2c_congestion_ind_cback, NULL,
-    avct_on_l2cap_error,           NULL,
-    NULL,                          NULL,
+    avct_l2c_connect_ind_cback,
+    avct_l2c_connect_cfm_cback,
+    avct_l2c_config_ind_cback,
+    avct_l2c_config_cfm_cback,
+    avct_l2c_disconnect_ind_cback,
+    NULL,
+    avct_l2c_data_ind_cback,
+    avct_l2c_congestion_ind_cback,
+    NULL,
+    avct_on_l2cap_error,
+    NULL,
+    NULL,
+    NULL,
 };
 
 /*******************************************************************************

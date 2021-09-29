@@ -30,6 +30,7 @@
 #include "stack/include/bt_hdr.h"
 #include "stack/include/port_ext.h"
 #include "stack/rfcomm/rfc_int.h"
+#include "types/raw_address.h"
 
 /*******************************************************************************
  *
@@ -295,13 +296,13 @@ void rfc_check_mcb_active(tRFC_MCB* p_mcb) {
 void rfcomm_port_timer_timeout(void* data) {
   tPORT* p_port = (tPORT*)data;
 
-  rfc_port_sm_execute(p_port, RFC_EVENT_TIMEOUT, NULL);
+  rfc_port_sm_execute(p_port, RFC_PORT_EVENT_TIMEOUT, NULL);
 }
 
 void rfcomm_mcb_timer_timeout(void* data) {
   tRFC_MCB* p_mcb = (tRFC_MCB*)data;
 
-  rfc_mx_sm_execute(p_mcb, RFC_EVENT_TIMEOUT, NULL);
+  rfc_mx_sm_execute(p_mcb, RFC_MX_EVENT_TIMEOUT, NULL);
 }
 
 /*******************************************************************************

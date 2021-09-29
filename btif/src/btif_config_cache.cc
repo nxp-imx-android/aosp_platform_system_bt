@@ -14,9 +14,12 @@
  *  limitations under the License.
  */
 
+#include "btif_config_cache.h"
+
 #include <limits>
 
-#include "btif_config_cache.h"
+#include "stack/include/bt_octets.h"
+#include "types/raw_address.h"
 
 namespace {
 

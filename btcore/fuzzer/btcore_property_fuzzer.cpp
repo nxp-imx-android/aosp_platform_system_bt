@@ -16,7 +16,10 @@
  */
 
 #include <fuzzer/FuzzedDataProvider.h>
+
 #include "btcore/include/property.h"
+#include "types/bluetooth/uuid.h"
+#include "types/raw_address.h"
 
 using bluetooth::Uuid;
 
