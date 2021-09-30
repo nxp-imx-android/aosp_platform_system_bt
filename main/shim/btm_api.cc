@@ -24,7 +24,6 @@
 
 #include "common/metric_id_allocator.h"
 #include "common/time_util.h"
-#include "device/include/controller.h"
 #include "gd/common/callback.h"
 #include "gd/neighbor/name.h"
 #include "gd/os/log.h"
@@ -38,6 +37,9 @@
 #include "main/shim/stack.h"
 #include "osi/include/allocator.h"
 #include "stack/btm/btm_int_types.h"
+#include "stack/include/bt_hdr.h"
+#include "stack/include/bt_octets.h"
+#include "types/bluetooth/uuid.h"
 #include "types/raw_address.h"
 
 using bluetooth::common::MetricIdAllocator;

@@ -74,7 +74,6 @@ extern std::map<std::string, int> mock_function_count_map;
 #include "common/metric_id_allocator.h"
 #include "common/metrics.h"
 #include "common/os_utils.h"
-#include "device/include/interop.h"
 #include "gd/common/init_flags.h"
 #include "main/shim/dumpsys.h"
 #include "main/shim/shim.h"
@@ -85,6 +84,7 @@ extern std::map<std::string, int> mock_function_count_map;
 #include "osi/include/wakelock.h"
 #include "stack/gatt/connection_manager.h"
 #include "stack/include/avdt_api.h"
+#include "types/raw_address.h"
 #include "utils/include/bt_utils.h"
 
 // Mocked compile conditionals, if any

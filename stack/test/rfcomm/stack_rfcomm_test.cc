@@ -25,12 +25,14 @@
 #include "osi/include/allocator.h"
 #include "osi/include/log.h"
 #include "osi/include/osi.h"
+#include "stack/include/bt_hdr.h"
 #include "stack/include/btm_api.h"
 #include "stack/include/l2c_api.h"
 #include "stack/include/port_api.h"
 #include "stack/rfcomm/rfc_int.h"
 #include "stack_rfcomm_test_utils.h"
 #include "stack_test_packet_utils.h"
+#include "types/raw_address.h"
 
 std::string DumpByteBufferToString(uint8_t* p_data, size_t len) {
   std::stringstream str;

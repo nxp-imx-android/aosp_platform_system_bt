@@ -27,7 +27,10 @@
 #ifndef AVDT_CAPI_H
 #define AVDT_CAPI_H
 
+#include <cstdint>
+
 #include "avdt_api.h"
+#include "types/raw_address.h"
 
 /* start AVDTC events here to distinguish from AVDT events */
 #define AVDTC_EVT_BEGIN 0x80

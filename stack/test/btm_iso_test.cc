@@ -19,12 +19,12 @@
 #include <gtest/gtest.h>
 
 #include "btm_iso_api.h"
-#include "device/include/controller.h"
 #include "hci/include/hci_layer.h"
 #include "main/shim/shim.h"
 #include "mock_controller.h"
 #include "mock_hcic_layer.h"
 #include "osi/include/allocator.h"
+#include "stack/include/bt_hdr.h"
 #include "stack/include/hci_error_code.h"
 #include "stack/include/hcidefs.h"
 

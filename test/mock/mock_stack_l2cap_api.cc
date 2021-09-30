@@ -34,15 +34,19 @@ extern std::map<std::string, int> mock_function_count_map;
 //       may need attention to prune the inclusion set.
 #include <base/logging.h>
 #include <base/strings/stringprintf.h>
+
 #include <cstdint>
 #include <string>
+
 #include "device/include/controller.h"
 #include "main/shim/l2c_api.h"
 #include "main/shim/shim.h"
 #include "osi/include/log.h"
 #include "stack/btm/btm_sec.h"
+#include "stack/include/bt_hdr.h"
 #include "stack/include/l2c_api.h"
 #include "stack/l2cap/l2c_int.h"
+#include "types/raw_address.h"
 
 // Mock include file to share data between tests and mock
 #include "test/mock/mock_stack_l2cap_api.h"

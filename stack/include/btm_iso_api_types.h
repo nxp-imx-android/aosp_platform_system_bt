@@ -17,7 +17,11 @@
 
 #pragma once
 
+#include <cstdint>
+
 #include "hcimsgs.h"
+#include "stack/include/bt_hdr.h"
+#include "stack/include/bt_octets.h"
 
 namespace bluetooth {
 namespace hci {

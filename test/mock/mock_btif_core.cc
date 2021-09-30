@@ -29,7 +29,9 @@ extern std::map<std::string, int> mock_function_count_map;
 #include <base/threading/platform_thread.h>
 #include <signal.h>
 #include <sys/types.h>
+
 #include <cstdint>
+
 #include "bt_target.h"
 #include "btif/include/btif_av.h"
 #include "btif/include/btif_common.h"
@@ -41,7 +43,6 @@ extern std::map<std::string, int> mock_function_count_map;
 #include "btif/include/btif_storage.h"
 #include "btif/include/stack_manager.h"
 #include "common/message_loop_thread.h"
-#include "device/include/controller.h"
 #include "osi/include/future.h"
 #include "osi/include/log.h"
 #include "osi/include/properties.h"
@@ -49,6 +50,7 @@ extern std::map<std::string, int> mock_function_count_map;
 #include "stack/include/btm_api.h"
 #include "stack/include/btm_ble_api.h"
 #include "types/bluetooth/uuid.h"
+#include "types/raw_address.h"
 
 #ifndef UNUSED_ATTR
 #define UNUSED_ATTR

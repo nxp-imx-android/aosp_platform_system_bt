@@ -34,7 +34,6 @@
 #include "btif/include/btif_bqr.h"
 #include "btm_int.h"
 #include "common/message_loop_thread.h"
-#include "device/include/controller.h"
 #include "hci/include/hci_layer.h"
 #include "hci/include/hci_packet_factory.h"
 #include "main/shim/btm_api.h"
@@ -46,7 +45,9 @@
 #include "stack/btm/btm_ble_int.h"
 #include "stack/gatt/connection_manager.h"
 #include "stack/include/acl_api.h"
+#include "stack/include/bt_hdr.h"
 #include "stack/include/l2cap_controller_interface.h"
+#include "types/raw_address.h"
 
 extern tBTM_CB btm_cb;
 

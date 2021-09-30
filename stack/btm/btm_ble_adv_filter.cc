@@ -18,24 +18,23 @@
 
 #define LOG_TAG "bt_btm_ble"
 
-#include "bt_target.h"
+#include <base/bind.h>
+#include <string.h>
 
+#include <algorithm>
+#include <vector>
+
+#include "bind_helpers.h"
+#include "bt_target.h"
 #include "btm_ble_api.h"
 #include "btm_dev.h"
 #include "btm_int.h"
 #include "btu.h"
-#include "device/include/controller.h"
 #include "stack/btm/btm_ble_int.h"
 #include "stack/btm/btm_int_types.h"
+#include "types/bluetooth/uuid.h"
+#include "types/raw_address.h"
 #include "utils/include/bt_utils.h"
-
-#include <string.h>
-#include <algorithm>
-#include <vector>
-
-#include <base/bind.h>
-
-#include "bind_helpers.h"
 
 extern tBTM_CB btm_cb;
 

@@ -21,8 +21,12 @@
 
 #include <base/bind.h>
 #include <base/memory/weak_ptr.h>
+
+#include <cstdint>
 #include <vector>
+
 #include "btm_ble_api.h"
+#include "types/raw_address.h"
 
 #define BTM_BLE_MULTI_ADV_SUCCESS 0
 #define BTM_BLE_MULTI_ADV_FAILURE 1

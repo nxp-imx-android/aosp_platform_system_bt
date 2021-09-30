@@ -21,11 +21,14 @@
 #include "device/include/esco_parameters.h"
 #include "stack/btm/neighbor_inquiry.h"
 #include "stack/include/acl_client_callbacks.h"
+#include "stack/include/bt_hdr.h"
+#include "stack/include/bt_octets.h"
 #include "stack/include/btm_api_types.h"
 #include "stack/include/btm_ble_api_types.h"
 #include "stack/include/btm_status.h"
 #include "stack/include/hci_error_code.h"
 #include "stack/include/security_client_callbacks.h"
+#include "types/bluetooth/uuid.h"
 #include "types/bt_transport.h"
 #include "types/raw_address.h"
 
@@ -216,6 +219,7 @@ struct btm_client_interface_s {
     uint8_t (*BTM_GetEirUuidList)(uint8_t* p_eir, size_t eir_len,
                                   uint8_t uuid_size, uint8_t* p_num_uuid,
                                   uint8_t* p_uuid_list, uint8_t max_num_uuid);
+    void (*BTM_AddEirService)(uint32_t* p_eir_uuid, uint16_t uuid16);
     void (*BTM_RemoveEirService)(uint32_t* p_eir_uuid, uint16_t uuid16);
   } eir;
 

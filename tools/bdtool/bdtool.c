@@ -25,6 +25,8 @@
 #include "osi/include/osi.h"
 #include "test/suite/support/callbacks.h"
 #include "test/suite/support/hal.h"
+#include "types/bluetooth/uuid.h"
+#include "types/raw_address.h"
 
 static const Uuid HFP_UUID =
     Uuid::From128BitBE({{0x00, 0x00, 0x11, 0x1E, 0x00, 0x00, 0x10, 0x00, 0x80,
