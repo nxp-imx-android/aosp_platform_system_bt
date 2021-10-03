@@ -17,6 +17,7 @@
 
 #pragma once
 
+#include <cstdint>
 #include <memory>
 #include <string>
 #include <vector>
@@ -56,6 +57,9 @@ struct BigCallbacks {
 class IsoManager {
  public:
   IsoManager();
+  IsoManager(const IsoManager&) = delete;
+  IsoManager& operator=(const IsoManager&) = delete;
+
   virtual ~IsoManager();
 
   static IsoManager* GetInstance() {
@@ -232,8 +236,6 @@ class IsoManager {
  private:
   struct impl;
   std::unique_ptr<impl> pimpl_;
-
-  DISALLOW_COPY_AND_ASSIGN(IsoManager);
 };
 
 }  // namespace hci
