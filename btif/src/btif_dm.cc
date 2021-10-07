@@ -1178,7 +1178,7 @@ static void btif_dm_search_devices_evt(tBTA_DM_SEARCH_EVT event,
       }
 
       {
-        bt_property_t properties[6];
+        bt_property_t properties[7];
         bt_device_type_t dev_type;
         uint32_t num_properties = 0;
         bt_status_t status;
@@ -1243,9 +1243,9 @@ static void btif_dm_search_devices_evt(tBTA_DM_SEARCH_EVT event,
         num_properties++;
 
         /* EIR queried services */
+        std::vector<Uuid> uuid128_list;
         if (num_uuids > 0) {
           uint16_t* p_uuid16 = (uint16_t*)uuid_list;
-          std::vector<Uuid> uuid128_list;
           for (int i = 0; i < num_uuids; ++i) {
             Uuid uuid = Uuid::From16Bit(p_uuid16[i]);
             uuid128_list.push_back(uuid);

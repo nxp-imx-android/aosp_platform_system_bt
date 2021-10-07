@@ -192,8 +192,7 @@ struct Interface {
   void (*SetControllerToHostFlowControl)();
   void (*HostBufferSize)();
   void (*HostNumCompletedPackets)();
-  void (*ReadLinkSupervisionTimeout)(uint8_t local_controller_id,
-                                     uint16_t handle, uint16_t timeout);
+  void (*ReadLinkSupervisionTimeout)(uint16_t handle, uint16_t timeout);
   void (*WriteLinkSupervisionTimeout)();
   void (*ReadNumberOfSupportedIac)();
   void (*ReadCurrentIacLap)();
@@ -467,8 +466,7 @@ extern void btsnd_hcic_host_num_xmitted_pkts(
     uint16_t* num_pkts); /* Set Host Buffer Size */
 
 /* Write Link Supervision Timeout */
-extern void btsnd_hcic_write_link_super_tout(uint8_t local_controller_id,
-                                             uint16_t handle, uint16_t timeout);
+extern void btsnd_hcic_write_link_super_tout(uint16_t handle, uint16_t timeout);
 /* Write Link Supervision Timeout */
 
 extern void btsnd_hcic_write_cur_iac_lap(
@@ -527,10 +525,6 @@ extern void btsnd_hcic_vendor_spec_cmd(void* buffer, uint16_t opcode,
 #define HCIC_PARAM_SIZE_BLE_SET_PHY 7
 
 /* ULP HCI command */
-extern void btsnd_hcic_ble_read_buffer_size(void);
-
-extern void btsnd_hcic_ble_read_local_spt_feat(void);
-
 extern void btsnd_hcic_ble_set_local_used_feat(uint8_t feat_set[8]);
 
 extern void btsnd_hcic_ble_set_random_addr(const RawAddress& random_addr);
