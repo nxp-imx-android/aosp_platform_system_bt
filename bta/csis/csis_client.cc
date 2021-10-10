@@ -188,7 +188,7 @@ class CsisClientImpl : public CsisClient {
     if (device) RemoveCsisDevice(device, group_id);
   }
 
-  void onGroupAddFromStorageCb(const RawAddress& address,
+  void OnGroupAddFromStorageCb(const RawAddress& address,
                                const bluetooth::Uuid& uuid, int group_id) {
     auto device = FindDeviceByAddress(address);
     if (device == nullptr) return;
@@ -572,8 +572,8 @@ class CsisClientImpl : public CsisClient {
 
     auto device = FindDeviceByAddress(addr);
     if (device == nullptr) {
-      auto dev = std::make_shared<CsisDevice>(addr, false);
-      devices_.push_back(dev);
+      device = std::make_shared<CsisDevice>(addr, false);
+      devices_.push_back(device);
     }
 
     for (const auto& csis_group : csis_groups_) {
@@ -587,7 +587,7 @@ class CsisClientImpl : public CsisClient {
     }
 
     if (autoconnect) {
-        BTA_GATTC_Open(gatt_if_, addr, false, false);
+      BTA_GATTC_Open(gatt_if_, addr, false, false);
     }
   }
 
@@ -608,9 +608,42 @@ class CsisClientImpl : public CsisClient {
 
   void Dump(int fd) {
     std::stringstream stream;
-    for (const auto& device : devices_) {
-      stream << "  " << device->addr << " " << std::endl;
+
+    stream << "  Groups\n";
+    for (const auto& g : csis_groups_) {
+      stream << "    == id: " << g->GetGroupId() << " ==\n"
+             << "    uuid: " << g->GetUuid() << "\n"
+             << "    desired size: " << g->GetDesiredSize() << "\n"
+             << "    discoverable state: "
+             << static_cast<int>(g->GetDiscoveryState()) << "\n"
+             << "    current lock state: "
+             << static_cast<int>(g->GetCurrentLockState()) << "\n"
+             << "    target lock state: "
+             << static_cast<int>(g->GetTargetLockState()) << "\n"
+             << "    devices: \n";
+      for (auto& device : devices_) {
+        if (!g->IsDeviceInTheGroup(device)) continue;
+
+        stream << "        == addr: " << device->addr << " ==\n"
+               << "        csis instance: data:"
+               << "\n";
+
+        auto instance = device->GetCsisInstanceByGroupId(g->GetGroupId());
+        if (!instance) {
+          stream << "          No csis instance available\n";
+        } else {
+          stream << "          rank: " << instance->GetRank() << "\n";
+        }
+
+        if (!device->IsConnected()) {
+          stream << "        Not connected\n";
+        } else {
+          stream << "        Connected conn_id = "
+                 << std::to_string(device->conn_id) << "\n";
+        }
+      }
     }
+
     dprintf(fd, "%s", stream.str().c_str());
   }
 
@@ -1806,10 +1839,10 @@ class DeviceGroupsCallbacksImpl : public DeviceGroupsCallbacks {
     if (instance) instance->OnGroupMemberRemovedCb(address, group_id);
   }
 
-  void onGroupAddFromStorage(const RawAddress& address,
+  void OnGroupAddFromStorage(const RawAddress& address,
                              const bluetooth::Uuid& uuid,
                              int group_id) override {
-    if (instance) instance->onGroupAddFromStorageCb(address, uuid, group_id);
+    if (instance) instance->OnGroupAddFromStorageCb(address, uuid, group_id);
   }
 };
 

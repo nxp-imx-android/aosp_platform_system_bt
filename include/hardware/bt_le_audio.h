@@ -33,11 +33,21 @@ enum class ConnectionState {
 };
 
 enum class GroupStatus {
+  INACTIVE = 0,
+  ACTIVE,
+};
+
+enum class GroupStreamStatus {
   IDLE = 0,
   STREAMING,
   SUSPENDED,
   RECONFIGURED,
   DESTROYED,
+};
+
+enum class GroupNodeStatus {
+  ADDED = 1,
+  REMOVED,
 };
 
 class LeAudioClientCallbacks {
@@ -49,18 +59,16 @@ class LeAudioClientCallbacks {
                                  const RawAddress& address) = 0;
 
   /* Callback with group status update */
-  virtual void OnGroupStatus(uint8_t group_id, GroupStatus group_status,
-                             uint8_t group_flags) = 0;
+  virtual void OnGroupStatus(int group_id, GroupStatus group_status) = 0;
 
+  /* Callback with node status update */
+  virtual void OnGroupNodeStatus(const RawAddress& bd_addr, int group_id,
+                                 GroupNodeStatus node_status) = 0;
   /* Callback for newly recognized or reconfigured existing le audio group */
   virtual void OnAudioConf(uint8_t direction, int group_id,
                            uint32_t snk_audio_location,
                            uint32_t src_audio_location,
                            uint16_t avail_cont) = 0;
-
-  /* Callback for available set member  */
-  virtual void OnSetMemberAvailable(const RawAddress& address,
-                                    uint8_t group_id) = 0;
 };
 
 class LeAudioClientInterface {
@@ -78,15 +86,6 @@ class LeAudioClientInterface {
 
   /* Cleanup the LeAudio */
   virtual void Cleanup(void) = 0;
-
-  /* Request to stream audio */
-  virtual void GroupStream(uint8_t group_id, uint16_t content_type) = 0;
-
-  /* Request to suspend audio */
-  virtual void GroupSuspend(uint8_t group_id) = 0;
-
-  /* Request to stop streaming audio */
-  virtual void GroupStop(uint8_t group_id) = 0;
 };
 
 static constexpr uint8_t INSTANCE_ID_UNDEFINED = 0xFF;

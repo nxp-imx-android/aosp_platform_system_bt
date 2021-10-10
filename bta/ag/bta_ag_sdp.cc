@@ -25,6 +25,7 @@
 
 #include <base/bind.h>
 #include <base/location.h>
+#include <base/logging.h>
 
 #include "bt_target.h"  // Legacy stack config
 #include "bt_trace.h"   // Legacy trace logging
@@ -477,7 +478,7 @@ void bta_ag_do_disc(tBTA_AG_SCB* p_scb, tBTA_SERVICE_MASK service) {
 
   if (p_scb->p_disc_db != nullptr) {
     android_errorWriteLog(0x534e4554, "174052148");
-    APPL_TRACE_ERROR("Discovery already in progress... returning.");
+    LOG_ERROR("Discovery already in progress... returning.");
     return;
   }
 
