@@ -25,6 +25,8 @@
 #include "types/bluetooth/uuid.h"
 #include "types/raw_address.h"
 
+#include <base/logging.h>
+
 using bluetooth::Uuid;
 
 namespace bluetooth {
@@ -224,6 +226,10 @@ class DeviceGroupsImpl : public DeviceGroups {
         auto* group =
             get_or_create_group_with_id(id, Uuid::From128BitLE(uuid128));
         if (group) add_to_group(addr, group);
+
+        for (auto c : callbacks_) {
+          c->OnGroupAddFromStorage(addr, Uuid::From128BitLE(uuid128), id);
+        }
       }
     }
   }

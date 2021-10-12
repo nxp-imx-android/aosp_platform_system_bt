@@ -28,14 +28,14 @@
 using base::Bind;
 using base::Unretained;
 using bluetooth::le_audio::ConnectionState;
-
+using bluetooth::le_audio::GroupNodeStatus;
 using bluetooth::le_audio::GroupStatus;
 using bluetooth::le_audio::LeAudioClientCallbacks;
 using bluetooth::le_audio::LeAudioClientInterface;
 
 namespace {
 class LeAudioClientInterfaceImpl;
-std::unique_ptr<LeAudioClientInterface> lEAudioInstance;
+std::unique_ptr<LeAudioClientInterface> leAudioInstance;
 
 class LeAudioClientInterfaceImpl : public LeAudioClientInterface,
                                    public LeAudioClientCallbacks {
@@ -47,18 +47,17 @@ class LeAudioClientInterfaceImpl : public LeAudioClientInterface,
                                      Unretained(callbacks), state, address));
   }
 
-  void OnGroupStatus(uint8_t group_id, GroupStatus group_status,
-                     uint8_t group_flags) override {
-    do_in_jni_thread(FROM_HERE, Bind(&LeAudioClientCallbacks::OnGroupStatus,
-                                     Unretained(callbacks), group_id,
-                                     group_status, group_flags));
+  void OnGroupStatus(int group_id, GroupStatus group_status) override {
+    do_in_jni_thread(FROM_HERE,
+                     Bind(&LeAudioClientCallbacks::OnGroupStatus,
+                          Unretained(callbacks), group_id, group_status));
   }
 
-  void OnSetMemberAvailable(const RawAddress& address,
-                            uint8_t group_id) override {
+  void OnGroupNodeStatus(const RawAddress& addr, int group_id,
+                         GroupNodeStatus node_status) override {
     do_in_jni_thread(FROM_HERE,
-                     Bind(&LeAudioClientCallbacks::OnSetMemberAvailable,
-                          Unretained(callbacks), address, group_id));
+                     Bind(&LeAudioClientCallbacks::OnGroupNodeStatus,
+                          Unretained(callbacks), addr, group_id, node_status));
   }
 
   void OnAudioConf(uint8_t direction, int group_id, uint32_t snk_audio_location,
@@ -75,16 +74,17 @@ class LeAudioClientInterfaceImpl : public LeAudioClientInterface,
 
   void Cleanup(void) override {}
 
+  void RemoveDevice(const RawAddress& address) override {}
+
   void Connect(const RawAddress& address) override {}
+
+  void GroupAddNode(const int group_id, const RawAddress& addr) override {}
 
   void Disconnect(const RawAddress& address) override {}
 
-  void GroupStream(const uint8_t group_id,
-                   const uint16_t content_type) override {}
+  void GroupRemoveNode(const int group_id, const RawAddress& addr) override {}
 
-  void GroupSuspend(const uint8_t group_id) override {}
-
-  void GroupStop(const uint8_t group_id) override {}
+  void GroupSetActive(const int group_id) override {}
 
  private:
   LeAudioClientCallbacks* callbacks;
@@ -93,9 +93,9 @@ class LeAudioClientInterfaceImpl : public LeAudioClientInterface,
 } /* namespace */
 
 LeAudioClientInterface* btif_le_audio_get_interface() {
-  if (!lEAudioInstance) {
-    lEAudioInstance.reset(new LeAudioClientInterfaceImpl());
+  if (!leAudioInstance) {
+    leAudioInstance.reset(new LeAudioClientInterfaceImpl());
   }
 
-  return lEAudioInstance.get();
+  return leAudioInstance.get();
 }

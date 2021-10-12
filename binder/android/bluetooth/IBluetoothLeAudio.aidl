@@ -18,6 +18,7 @@
 package android.bluetooth;
 
 import android.bluetooth.BluetoothDevice;
+import android.content.AttributionSource;
 
 /**
  * APIs for Bluetooth LE Audio service
@@ -26,22 +27,43 @@ import android.bluetooth.BluetoothDevice;
  */
 interface IBluetoothLeAudio {
     // Public API
-    boolean connect(in BluetoothDevice device);
-    boolean disconnect(in BluetoothDevice device);
-    List<BluetoothDevice> getConnectedDevices();
-    List<BluetoothDevice> getDevicesMatchingConnectionStates(in int[] states);
-    int getConnectionState(in BluetoothDevice device);
-    boolean setActiveDevice(in BluetoothDevice device);
-    List<BluetoothDevice> getActiveDevices();
-    boolean setConnectionPolicy(in BluetoothDevice device, int connectionPolicy);
-    int getConnectionPolicy(in BluetoothDevice device);
+    @JavaPassthrough(annotation="@android.annotation.RequiresPermission(android.Manifest.permission.BLUETOOTH_CONNECT)")
+    boolean connect(in BluetoothDevice device, in AttributionSource attributionSource);
+    @JavaPassthrough(annotation="@android.annotation.RequiresPermission(android.Manifest.permission.BLUETOOTH_CONNECT)")
+    boolean disconnect(in BluetoothDevice device, in AttributionSource attributionSource);
+    @JavaPassthrough(annotation="@android.annotation.RequiresPermission(android.Manifest.permission.BLUETOOTH_CONNECT)")
+    List<BluetoothDevice> getConnectedDevices(in AttributionSource attributionSource);
+    @JavaPassthrough(annotation="@android.annotation.RequiresPermission(android.Manifest.permission.BLUETOOTH_CONNECT)")
+    List<BluetoothDevice> getDevicesMatchingConnectionStates(in int[] states, in AttributionSource attributionSource);
+    @JavaPassthrough(annotation="@android.annotation.RequiresPermission(android.Manifest.permission.BLUETOOTH_CONNECT)")
+    int getConnectionState(in BluetoothDevice device, in AttributionSource attributionSource);
+    @JavaPassthrough(annotation="@android.annotation.RequiresPermission(android.Manifest.permission.BLUETOOTH_CONNECT)")
+    boolean setActiveDevice(in BluetoothDevice device, in AttributionSource attributionSource);
+    @JavaPassthrough(annotation="@android.annotation.RequiresPermission(android.Manifest.permission.BLUETOOTH_CONNECT)")
+    List<BluetoothDevice> getActiveDevices(in AttributionSource attributionSource);
+    @JavaPassthrough(annotation="@android.annotation.RequiresPermission(allOf={android.Manifest.permission.BLUETOOTH_CONNECT,android.Manifest.permission.BLUETOOTH_PRIVILEGED})")
+    boolean setConnectionPolicy(in BluetoothDevice device, int connectionPolicy, in AttributionSource attributionSource);
+    @JavaPassthrough(annotation="@android.annotation.RequiresPermission(android.Manifest.permission.BLUETOOTH_CONNECT)")
+    int getConnectionPolicy(in BluetoothDevice device, in AttributionSource attributionSource);
 
     const int LE_AUDIO_GROUP_ID_INVALID = -1;
+
+    const int GROUP_STATUS_INACTIVE = 0;
+    const int GROUP_STATUS_ACTIVE = 1;
+
+    const int GROUP_NODE_ADDED = 1;
+    const int GROUP_NODE_REMOVED = 2;
 
     /**
      * Get device group id. Devices with same group id belong to same group (i.e left and right
      * earbud)
      */
-    int getGroupId(in BluetoothDevice device);
-
+    @JavaPassthrough(annotation="@android.annotation.RequiresPermission(android.Manifest.permission.BLUETOOTH_CONNECT)")
+    int getGroupId(in BluetoothDevice device, in AttributionSource attributionSource);
+    @JavaPassthrough(annotation="@android.annotation.RequiresPermission(android.Manifest.permission.BLUETOOTH_CONNECT)")
+    void setVolume(int volume, in AttributionSource attributionSource);
+    @JavaPassthrough(annotation="@android.annotation.RequiresPermission(android.Manifest.permission.BLUETOOTH_CONNECT)")
+    boolean groupAddNode(int group_id, in BluetoothDevice device, in AttributionSource attributionSource);
+    @JavaPassthrough(annotation="@android.annotation.RequiresPermission(android.Manifest.permission.BLUETOOTH_CONNECT)")
+    boolean groupRemoveNode(int group_id, in BluetoothDevice device, in AttributionSource attributionSource);
 }

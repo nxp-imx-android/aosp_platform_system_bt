@@ -56,6 +56,8 @@
 #include "types/bluetooth/uuid.h"
 #include "types/raw_address.h"
 
+#include <base/logging.h>
+
 #if (GAP_INCLUDED == TRUE)
 #include "gap_api.h"
 #endif
@@ -394,6 +396,9 @@ void BTA_dm_on_hw_on() {
    * when capabilities are read. If they are not available, initialize
    * advertising here */
   btm_ble_adv_init();
+  /* Set controller features even if vendor support is not included */
+  if (bta_dm_cb.p_sec_cback)
+    bta_dm_cb.p_sec_cback(BTA_DM_LE_FEATURES_READ, NULL);
 #endif
 
   /* Earlier, we used to invoke BTM_ReadLocalAddr which was just copying the
