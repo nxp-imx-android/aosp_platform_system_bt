@@ -3,7 +3,6 @@ use paste::paste;
 use std::sync::Mutex;
 
 /// Deprecated immutable flag
-/// NONE at this time
 
 macro_rules! init_flags {
     (flags: { $($flag:ident),* }, dependencies: { $($parent:ident => $child:ident),* }) => {
@@ -83,7 +82,6 @@ init_flags!(
         gd_security,
         gd_acl,
         gd_l2cap,
-        gd_controller,
         gatt_robust_caching,
         btaa_hci,
         gd_rust,
@@ -95,7 +93,6 @@ init_flags!(
         gd_l2cap => gd_scanning,
         gd_scanning => gd_advertising,
         gd_advertising => gd_acl,
-        gd_acl => gd_controller,
         gd_link_policy => gd_acl
     }
 );

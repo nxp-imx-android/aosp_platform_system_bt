@@ -23,6 +23,7 @@
 
 #include "base/bind.h"
 #include "base/callback.h"
+#include "base/logging.h"
 #include "bind_helpers.h"
 #include "btm_iso_api.h"
 #include "common/time_util.h"
@@ -420,7 +421,8 @@ struct iso_impl {
     if (iso_credits_ == 0 || data_len > iso_buffer_size_) {
       LOG(WARNING) << __func__ << ", dropping ISO packet, len: "
                    << static_cast<int>(data_len)
-                   << ", iso credits: " << static_cast<int>(iso_credits_);
+                   << ", iso credits: " << static_cast<int>(iso_credits_)
+                   << ", iso handle: " << loghex(iso_handle);
       return;
     }
 
