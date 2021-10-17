@@ -216,13 +216,20 @@ void LinkLayerController::IncomingPacket(
   }
 
   // Check connection addresses
-  if (connections_.GetHandleOnlyAddress(destination_address) !=
-      kReservedHandle) {
-    address_matches = true;
+  auto source_address = incoming.GetSourceAddress();
+  auto handle = connections_.GetHandleOnlyAddress(source_address);
+  if (handle != kReservedHandle) {
+    if (connections_.GetOwnAddress(handle).GetAddress() ==
+        destination_address) {
+      address_matches = true;
+    }
   }
 
   // Drop packets not addressed to me
   if (!address_matches) {
+    LOG_INFO("Dropping packet not addressed to me %s->%s",
+             source_address.ToString().c_str(),
+             destination_address.ToString().c_str());
     return;
   }
 
@@ -602,7 +609,7 @@ void LinkLayerController::IncomingDisconnectPacket(
 
 void LinkLayerController::IncomingEncryptConnection(
     model::packets::LinkLayerPacketView incoming) {
-  LOG_INFO();
+  LOG_INFO("IncomingEncryptConnection");
 
   // TODO: Check keys
   Address peer = incoming.GetSourceAddress();
@@ -630,7 +637,7 @@ void LinkLayerController::IncomingEncryptConnection(
 
 void LinkLayerController::IncomingEncryptConnectionResponse(
     model::packets::LinkLayerPacketView incoming) {
-  LOG_INFO();
+  LOG_INFO("IncomingEncryptConnectionResponse");
   // TODO: Check keys
   uint16_t handle =
       connections_.GetHandleOnlyAddress(incoming.GetSourceAddress());
@@ -1353,7 +1360,7 @@ void LinkLayerController::IncomingLeConnectCompletePacket(
 
 void LinkLayerController::IncomingLeEncryptConnection(
     model::packets::LinkLayerPacketView incoming) {
-  LOG_INFO();
+  LOG_INFO("IncomingLeEncryptConnection");
 
   Address peer = incoming.GetSourceAddress();
   uint16_t handle = connections_.GetHandleOnlyAddress(peer);
@@ -1376,7 +1383,7 @@ void LinkLayerController::IncomingLeEncryptConnection(
 
 void LinkLayerController::IncomingLeEncryptConnectionResponse(
     model::packets::LinkLayerPacketView incoming) {
-  LOG_INFO();
+  LOG_INFO("IncomingLeEncryptConnectionResponse");
   // TODO: Check keys
   uint16_t handle =
       connections_.GetHandleOnlyAddress(incoming.GetSourceAddress());

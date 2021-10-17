@@ -3,7 +3,9 @@ use paste::paste;
 use std::sync::Mutex;
 
 /// Deprecated immutable flag
-/// NONE at this time
+pub fn gd_acl_is_enabled() -> bool {
+    true
+}
 
 macro_rules! init_flags {
     (flags: { $($flag:ident),* }, dependencies: { $($parent:ident => $child:ident),* }) => {
@@ -53,7 +55,7 @@ macro_rules! init_flags {
 
                 // TODO: acl should not be off if l2cap is on, but need to reconcile legacy code
                 if self.gd_l2cap {
-                    self.gd_acl = false;
+                  // TODO This can never be turned off  self.gd_acl = false;
                 }
 
                 self
@@ -81,9 +83,7 @@ init_flags!(
         gd_advertising,
         gd_scanning,
         gd_security,
-        gd_acl,
         gd_l2cap,
-        gd_controller,
         gatt_robust_caching,
         btaa_hci,
         gd_rust,
@@ -91,12 +91,8 @@ init_flags!(
     },
     dependencies: {
         gd_core => gd_security,
-        gd_security => gd_acl,
         gd_l2cap => gd_scanning,
-        gd_scanning => gd_advertising,
-        gd_advertising => gd_acl,
-        gd_acl => gd_controller,
-        gd_link_policy => gd_acl
+        gd_scanning => gd_advertising
     }
 );
 

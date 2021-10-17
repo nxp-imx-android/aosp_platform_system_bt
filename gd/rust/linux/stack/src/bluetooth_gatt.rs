@@ -1413,10 +1413,16 @@ mod tests {
     }
 
     impl RPCProxy for TestBluetoothGattCallback {
-        fn register_disconnect(&mut self, _f: Box<dyn Fn() + Send>) {}
+        fn register_disconnect(&mut self, _f: Box<dyn Fn(u32) + Send>) -> u32 {
+            0
+        }
 
         fn get_object_id(&self) -> String {
             self.id.clone()
+        }
+
+        fn unregister(&mut self, _id: u32) -> bool {
+            false
         }
     }
 
