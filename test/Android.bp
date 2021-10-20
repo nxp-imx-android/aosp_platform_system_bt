@@ -97,6 +97,20 @@ filegroup {
 }
 
 filegroup {
+    name: "TestMockBtaLeAudio",
+    srcs: [
+      "mock/mock_bta_leaudio*.cc",
+    ],
+}
+
+filegroup {
+  name: "TestMockBtaLeAudioHalVerifier",
+  srcs: [
+      "mock/mock_le_audio_hal_verifier.cc",
+  ],
+}
+
+filegroup {
     name: "TestMockBtaPan",
     srcs: [
       "mock/mock_bta_pan_*.cc",
@@ -139,6 +153,8 @@ filegroup {
       ":TestMockBtaHf",
       ":TestMockBtaHh",
       ":TestMockBtaJv",
+      ":TestMockBtaLeAudio",
+      ":TestMockBtaLeAudioHalVerifier",
       ":TestMockBtaPan",
       ":TestMockBtaSdp",
       ":TestMockBtaSys",
