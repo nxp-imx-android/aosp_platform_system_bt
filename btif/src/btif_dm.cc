@@ -35,6 +35,7 @@
 #include <hardware/bluetooth.h>
 #include <hardware/bt_csis.h>
 #include <hardware/bt_hearing_aid.h>
+#include <hardware/bt_le_audio.h>
 #include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -49,6 +50,7 @@
 #include "bta_csis_api.h"
 #include "bta_dm_int.h"
 #include "bta_gatt_api.h"
+#include "bta_le_audio_api.h"
 #include "btif/include/stack_manager.h"
 #include "btif_api.h"
 #include "btif_av.h"
@@ -86,6 +88,7 @@ using bluetooth::Uuid;
 const Uuid UUID_HEARING_AID = Uuid::FromString("FDF0");
 const Uuid UUID_VC = Uuid::FromString("1844");
 const Uuid UUID_CSIS = Uuid::FromString("1846");
+const Uuid UUID_LE_AUDIO = Uuid::FromString("184E");
 
 #define COD_MASK 0x07FF
 
@@ -223,8 +226,9 @@ static void btif_dm_ble_key_nc_req_evt(tBTA_DM_SP_KEY_NOTIF* p_notif_req);
 static void btif_dm_ble_oob_req_evt(tBTA_DM_SP_RMT_OOB* req_oob_type);
 static void btif_dm_ble_sc_oob_req_evt(tBTA_DM_SP_RMT_OOB* req_oob_type);
 
-static void bte_scan_filt_param_cfg_evt(uint8_t action_type, uint8_t avbl_space,
-                                        uint8_t ref_value, uint8_t btm_status);
+static void bte_scan_filt_param_cfg_evt(uint8_t avbl_space,
+                                        tBTM_BLE_SCAN_COND_OP action_type,
+                                        tBTM_STATUS btm_status);
 
 static char* btif_get_default_local_name();
 
@@ -244,6 +248,8 @@ extern bt_status_t btif_hd_execute_service(bool b_enable);
 extern bluetooth::hearing_aid::HearingAidInterface*
 btif_hearing_aid_get_interface();
 extern bluetooth::csis::CsisClientInterface* btif_csis_client_get_interface();
+extern bluetooth::le_audio::LeAudioClientInterface*
+btif_le_audio_get_interface();
 
 /******************************************************************************
  *  Functions
@@ -1270,11 +1276,9 @@ static void btif_dm_search_devices_evt(tBTA_DM_SEARCH_EVT event,
     } break;
 
     case BTA_DM_INQ_CMPL_EVT: {
-      BTM_BleAdvFilterParamSetup(BTM_BLE_SCAN_COND_DELETE,
-                                 static_cast<tBTM_BLE_PF_FILT_INDEX>(0),
-                                 nullptr,
-                                 base::Bind(&bte_scan_filt_param_cfg_evt,
-                                            btm_status_value(BTM_SUCCESS)));
+      BTM_BleAdvFilterParamSetup(
+          BTM_BLE_SCAN_COND_DELETE, static_cast<tBTM_BLE_PF_FILT_INDEX>(0),
+          nullptr, base::Bind(&bte_scan_filt_param_cfg_evt));
     } break;
     case BTA_DM_DISC_CMPL_EVT: {
       invoke_discovery_state_changed_cb(BT_DISCOVERY_STOPPED);
@@ -1293,8 +1297,7 @@ static void btif_dm_search_devices_evt(tBTA_DM_SEARCH_EVT event,
         btgatt_filt_param_setup_t adv_filt_param;
         memset(&adv_filt_param, 0, sizeof(btgatt_filt_param_setup_t));
         BTM_BleAdvFilterParamSetup(BTM_BLE_SCAN_COND_DELETE, 0, nullptr,
-                                   base::Bind(&bte_scan_filt_param_cfg_evt,
-                                              btm_status_value(BTM_SUCCESS)));
+                                   base::Bind(&bte_scan_filt_param_cfg_evt));
         invoke_discovery_state_changed_cb(BT_DISCOVERY_STOPPED);
       }
     } break;
@@ -1304,7 +1307,7 @@ static void btif_dm_search_devices_evt(tBTA_DM_SEARCH_EVT event,
 /* Returns true if |uuid| should be passed as device property */
 static bool btif_is_interesting_le_service(bluetooth::Uuid uuid) {
   return (uuid.As16Bit() == UUID_SERVCLASS_LE_HID || uuid == UUID_HEARING_AID ||
-          uuid == UUID_VC || uuid == UUID_CSIS);
+          uuid == UUID_VC || uuid == UUID_CSIS || uuid == UUID_LE_AUDIO);
 }
 
 /*******************************************************************************
@@ -1457,7 +1460,7 @@ static void btif_dm_search_services_evt(tBTA_DM_SEARCH_EVT event,
   }
 }
 
-void BTIF_dm_report_inquiry_status_change(uint8_t status) {
+void BTIF_dm_report_inquiry_status_change(tBTM_STATUS status) {
   if (status == BTM_INQUIRY_STARTED) {
     invoke_discovery_state_changed_cb(BT_DISCOVERY_STARTED);
     btif_dm_inquiry_in_progress = true;
@@ -1591,6 +1594,9 @@ static void btif_dm_upstreams_evt(uint16_t event, char* p_param) {
 
       if (bluetooth::csis::CsisClient::IsCsisClientRunning())
         btif_csis_client_get_interface()->RemoveDevice(bd_addr);
+
+      if (LeAudioClient::IsLeAudioClientRunning())
+        btif_le_audio_get_interface()->RemoveDevice(bd_addr);
 
       btif_storage_remove_bonded_device(&bd_addr);
       bond_state_changed(BT_STATUS_SUCCESS, bd_addr, BT_BOND_STATE_NONE);
@@ -1806,9 +1812,8 @@ static void bta_energy_info_cb(tBTM_BLE_TX_TIME_MS tx_time,
 }
 
 /* Scan filter param config event */
-static void bte_scan_filt_param_cfg_evt(uint8_t ref_value, uint8_t avbl_space,
-                                        uint8_t action_type,
-                                        uint8_t btm_status) {
+static void bte_scan_filt_param_cfg_evt(uint8_t avbl_space, uint8_t action_type,
+                                        tBTM_STATUS btm_status) {
   /* This event occurs on calling BTA_DmBleCfgFilterCondition internally,
   ** and that is why there is no HAL callback
   */
@@ -1842,9 +1847,9 @@ void btif_dm_start_discovery(void) {
   }
 
   /* Cleanup anything remaining on index 0 */
-  BTM_BleAdvFilterParamSetup(
-      BTM_BLE_SCAN_COND_DELETE, static_cast<tBTM_BLE_PF_FILT_INDEX>(0), nullptr,
-      base::Bind(&bte_scan_filt_param_cfg_evt, btm_status_value(BTM_SUCCESS)));
+  BTM_BleAdvFilterParamSetup(BTM_BLE_SCAN_COND_DELETE,
+                             static_cast<tBTM_BLE_PF_FILT_INDEX>(0), nullptr,
+                             base::Bind(&bte_scan_filt_param_cfg_evt));
 
   auto adv_filt_param = std::make_unique<btgatt_filt_param_setup_t>();
   /* Add an allow-all filter on index 0*/
@@ -1856,8 +1861,7 @@ void btif_dm_start_discovery(void) {
   adv_filt_param->rssi_high_thres = LOWEST_RSSI_VALUE;
   BTM_BleAdvFilterParamSetup(
       BTM_BLE_SCAN_COND_ADD, static_cast<tBTM_BLE_PF_FILT_INDEX>(0),
-      std::move(adv_filt_param),
-      base::Bind(&bte_scan_filt_param_cfg_evt, btm_status_value(BTM_SUCCESS)));
+      std::move(adv_filt_param), base::Bind(&bte_scan_filt_param_cfg_evt));
 
   /* Will be enabled to true once inquiry busy level has been received */
   btif_dm_inquiry_in_progress = false;
@@ -2414,7 +2418,7 @@ static void get_address_callback(tBT_TRANSPORT transport, bool is_valid,
 // Step Three: CallBack from Step Two, advertise and get address
 static void start_advertising_callback(uint8_t id, tBT_TRANSPORT transport,
                                        bool is_valid, const Octet16& c,
-                                       const Octet16& r, uint8_t status) {
+                                       const Octet16& r, tBTM_STATUS status) {
   if (status != 0) {
     LOG_INFO("OOB get advertiser ID failed with status %hhd", status);
     invoke_oob_data_request_cb(transport, false, c, r, RawAddress{}, 0x00);
@@ -2429,7 +2433,7 @@ static void start_advertising_callback(uint8_t id, tBT_TRANSPORT transport,
       id, base::Bind(&get_address_callback, transport, is_valid, c, r));
 }
 
-static void timeout_cb(uint8_t id, uint8_t status) {
+static void timeout_cb(uint8_t id, tBTM_STATUS status) {
   LOG_INFO("OOB advertiser with id %hhd timed out with status %hhd", id,
            status);
   auto advertiser = get_ble_advertiser_instance();
@@ -2442,7 +2446,7 @@ static void timeout_cb(uint8_t id, uint8_t status) {
 // Step Two: CallBack from Step One, advertise and get address
 static void id_status_callback(tBT_TRANSPORT transport, bool is_valid,
                                const Octet16& c, const Octet16& r, uint8_t id,
-                               uint8_t status) {
+                               tBTM_STATUS status) {
   if (status != 0) {
     LOG_INFO("OOB get advertiser ID failed with status %hhd", status);
     invoke_oob_data_request_cb(transport, false, c, r, RawAddress{}, 0x00);

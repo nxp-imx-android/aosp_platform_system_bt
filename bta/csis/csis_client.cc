@@ -400,6 +400,21 @@ class CsisClientImpl : public CsisClient {
     if (cb) std::move(cb).Run(group_id, lock, status);
   }
 
+  std::vector<RawAddress> GetDeviceList(int group_id) override {
+    std::vector<RawAddress> result;
+    auto csis_group = FindCsisGroup(group_id);
+
+    if (!csis_group || csis_group->IsEmpty()) return result;
+
+    auto csis_device = csis_group->GetFirstDevice();
+    while (csis_device) {
+      result.push_back(csis_device->addr);
+      csis_device = csis_group->GetNextDevice(csis_device);
+    }
+
+    return result;
+  }
+
   void LockGroup(int group_id, bool lock, CsisLockCb cb) override {
     if (lock)
       DLOG(INFO) << __func__ << " Locking group: " << int(group_id);
@@ -455,7 +470,6 @@ class CsisClientImpl : public CsisClient {
       return;
     }
 
-    csis_group->SortByCsisRank();
     csis_group->SetTargetLockState(new_lock_state, std::move(cb));
 
     if (lock) {
@@ -986,6 +1000,8 @@ class CsisClientImpl : public CsisClient {
     }
 
     csis_instance->SetRank((value[0]));
+    auto csis_group = FindCsisGroup(csis_instance->GetGroupId());
+    csis_group->SortByCsisRank();
   }
 
   void OnCsisObserveCompleted(void) {
@@ -1099,11 +1115,13 @@ class CsisClientImpl : public CsisClient {
       DLOG(INFO) << "Found set member " << result->bd_addr;
       callbacks_->OnSetMemberAvailable(result->bd_addr,
                                        csis_group->GetGroupId());
-    }
 
-    /* Switch back to the opportunistic observer mode */
-    CsisActiveObserverSet(false);
-    csis_group->SetDiscoveryState(CsisDiscoveryState::CSIS_DISCOVERY_IDLE);
+      /* Switch back to the opportunistic observer mode.
+       * When second device will pair, csis will restart active scan
+       * to search more members if needed */
+      CsisActiveObserverSet(false);
+      csis_group->SetDiscoveryState(CsisDiscoveryState::CSIS_DISCOVERY_IDLE);
+    }
   }
 
   void CsisActiveObserverSet(bool enable) {
@@ -1144,7 +1162,7 @@ class CsisClientImpl : public CsisClient {
     if ((csis_group->GetDiscoveryState() !=
          CsisDiscoveryState::CSIS_DISCOVERY_IDLE)) {
       LOG(ERROR) << __func__
-                 << " Incorrect ase group: " << loghex(csis_group->GetGroupId())
+                 << " Incorrect ase group: " << csis_group->GetGroupId()
                  << " state "
                  << loghex(static_cast<int>(csis_group->GetDiscoveryState()));
       return;
