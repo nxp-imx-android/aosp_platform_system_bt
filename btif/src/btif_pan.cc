@@ -182,21 +182,15 @@ static inline int btpan_role_to_bta(int btpan_role) {
 }
 
 static volatile int btpan_dev_local_role;
-#if (BTA_PAN_INCLUDED == TRUE)
 static tBTA_PAN_ROLE_INFO bta_panu_info = {PANU_SERVICE_NAME, 0};
 static tBTA_PAN_ROLE_INFO bta_pan_nap_info = {PAN_NAP_SERVICE_NAME, 1};
-#endif
 
 static bt_status_t btpan_enable(int local_role) {
-#if (BTA_PAN_INCLUDED == TRUE)
   BTIF_TRACE_DEBUG("%s - local_role: %d", __func__, local_role);
   int bta_pan_role = btpan_role_to_bta(local_role);
   BTA_PanSetRole(bta_pan_role, &bta_panu_info, &bta_pan_nap_info);
   btpan_dev_local_role = local_role;
   return BT_STATUS_SUCCESS;
-#else
-  return BT_STATUS_FAIL;
-#endif
 }
 
 static int btpan_get_local_role() {
@@ -568,9 +562,8 @@ static void bta_pan_callback_transfer(uint16_t event, char* p_param) {
       break;
     case BTA_PAN_SET_ROLE_EVT: {
       int btpan_role = bta_role_to_btpan(p_data->set_role.role);
-      bt_status_t status = p_data->set_role.status == BTA_PAN_SUCCESS
-                               ? BT_STATUS_SUCCESS
-                               : BT_STATUS_FAIL;
+      bt_status_t status =
+          (p_data->set_role.status) ? BT_STATUS_SUCCESS : BT_STATUS_FAIL;
       btpan_control_state_t state =
           btpan_role == 0 ? BTPAN_STATE_DISABLED : BTPAN_STATE_ENABLED;
       callback.control_state_cb(state, btpan_role, status, TAP_IF_NAME);
@@ -602,7 +595,7 @@ static void bta_pan_callback_transfer(uint16_t event, char* p_param) {
 
       LOG_VERBOSE("%s pan connection open status: %d", __func__,
                   p_data->open.status);
-      if (p_data->open.status == BTA_PAN_SUCCESS) {
+      if (p_data->open.status) {
         state = BTPAN_STATE_CONNECTED;
         status = BT_STATUS_SUCCESS;
         btpan_open_conn(conn, p_data);

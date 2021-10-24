@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 The Android Open Source Project
+ * Copyright 2021 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,33 +15,10 @@
  */
 
 #pragma once
-
 #include <string>
-
-#include "bundler_schema_generated.h"
-#include "flatbuffers/flatbuffers.h"
-#include "flatbuffers/idl.h"
 
 namespace bluetooth {
 namespace dumpsys {
-
-class ReflectionSchema {
- public:
-  ReflectionSchema(const std::string& pre_bundled_schema);
-
-  std::string GetTitle() const;
-  std::string GetRootName() const;
-  int GetNumberOfBundledSchemas() const;
-
-  bool VerifyReflectionSchema() const;
-  const reflection::Schema* GetRootReflectionSchema() const;
-  const reflection::Schema* FindInReflectionSchema(const std::string& name) const;
-  void PrintReflectionSchema() const;
-
- private:
-  const BundledSchema* bundled_schema_;
-  const std::string pre_bundled_schema_;
-};
-
+const std::string& GetBundledSchemaData();
 }  // namespace dumpsys
 }  // namespace bluetooth

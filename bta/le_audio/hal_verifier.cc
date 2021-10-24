@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 The Android Open Source Project
+ * Copyright 2021 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,18 +14,10 @@
  * limitations under the License.
  */
 
-#pragma once
+#include "audio_hal_interface/hal_version_manager.h"
+#include "bta_le_audio_api.h"
 
-#include "device/include/controller.h"
-
-static const char GD_CONTROLLER_MODULE[] = "gd_controller_module";
-
-namespace bluetooth {
-namespace shim {
-
-const controller_t* controller_get_interface();
-
-void controller_clear_event_mask();
-
-}  // namespace shim
-}  // namespace bluetooth
+bool LeAudioHalVerifier::SupportsLeAudio() {
+  return bluetooth::audio::HalVersionManager::GetHalVersion() ==
+         bluetooth::audio::BluetoothAudioHalVersion::VERSION_2_1;
+}

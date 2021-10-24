@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 The Android Open Source Project
+ * Copyright 2021 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,19 +13,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+#include <map>
+#include <string>
 
-#pragma once
+extern std::map<std::string, int> mock_function_count_map;
 
-#include "device/include/controller.h"
+#include "bta/include/bta_le_audio_api.h"
 
-static const char GD_CONTROLLER_MODULE[] = "gd_controller_module";
-
-namespace bluetooth {
-namespace shim {
-
-const controller_t* controller_get_interface();
-
-void controller_clear_event_mask();
-
-}  // namespace shim
-}  // namespace bluetooth
+bool LeAudioHalVerifier::SupportsLeAudio() {
+  mock_function_count_map[__func__]++;
+  return true;
+}

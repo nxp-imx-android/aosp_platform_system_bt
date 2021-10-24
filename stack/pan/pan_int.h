@@ -40,13 +40,16 @@
 
 #define PAN_PROFILE_VERSION 0x0100 /* Version 1.00 */
 
+typedef enum : uint8_t {
+  PAN_STATE_IDLE = 0,
+  PAN_STATE_CONN_START = 1,
+  PAN_STATE_CONNECTED = 2,
+} tPAN_STATE;
+
 /* Define the PAN Connection Control Block
  */
 typedef struct {
-#define PAN_STATE_IDLE 0
-#define PAN_STATE_CONN_START 1
-#define PAN_STATE_CONNECTED 2
-  uint8_t con_state;
+  tPAN_STATE con_state;
 
 #define PAN_FLAGS_CONN_COMPLETED 0x01
   uint8_t con_flags;
@@ -67,9 +70,9 @@ typedef struct {
 /*  The main PAN control block
  */
 typedef struct {
-  uint8_t role;
-  uint8_t active_role;
-  uint8_t prv_active_role;
+  tPAN_ROLE role;
+  tPAN_ROLE active_role;
+  tPAN_ROLE prv_active_role;
   tPAN_CONN pcb[MAX_PAN_CONNS];
 
   tPAN_CONN_STATE_CB* pan_conn_state_cb; /* Connection state callback */

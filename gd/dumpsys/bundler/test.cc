@@ -14,12 +14,17 @@
  * limitations under the License.
  */
 #include <gtest/gtest.h>
+
 #include <list>
 #include <vector>
 
 #include "bundler.h"
-#include "bundler_generated.h"
+#include "bundler_schema_generated.h"
 #include "flatbuffers/flatbuffers.h"
+
+// Must be run from the same directory as the test data 'test.bfbs'.
+// This is how the presubmit unit test pipeline functions.
+constexpr char kTestFilename[] = "test.bfbs";
 
 bool LoadBinarySchema(const char* filename, std::string* binary_schema);
 bool VerifyBinarySchema(const std::vector<uint8_t>& raw_schema);
@@ -40,14 +45,14 @@ class BundlerTest : public ::testing::Test {
 TEST_F(BundlerTest, LoadBinarySchema) {
   std::string string_schema;
   ASSERT_FALSE(LoadBinarySchema(nullptr, &string_schema));
-  ASSERT_DEATH(LoadBinarySchema("test.bfbs", nullptr), "");
-  ASSERT_TRUE(LoadBinarySchema("test.bfbs", &string_schema));
+  ASSERT_DEATH(LoadBinarySchema(kTestFilename, nullptr), "");
+  ASSERT_TRUE(LoadBinarySchema(kTestFilename, &string_schema));
   ASSERT_FALSE(LoadBinarySchema("does_not_exist.bfbs", &string_schema));
 }
 
 TEST_F(BundlerTest, VerifyBinarySchema) {
   std::string string_schema;
-  ASSERT_TRUE(LoadBinarySchema("test.bfbs", &string_schema));
+  ASSERT_TRUE(LoadBinarySchema(kTestFilename, &string_schema));
   std::vector<uint8_t> raw_schema(string_schema.begin(), string_schema.end());
   ASSERT_TRUE(VerifyBinarySchema(raw_schema));
 

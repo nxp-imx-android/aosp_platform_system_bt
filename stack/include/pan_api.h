@@ -24,6 +24,8 @@
 #ifndef PAN_API_H
 #define PAN_API_H
 
+#include <base/strings/stringprintf.h>
+
 #include <cstdint>
 
 #include "bnep_api.h"
@@ -49,18 +51,23 @@
 
 /* Bit map for PAN roles */
 #define PAN_ROLE_CLIENT 0x01     /* PANU role */
+#define PAN_ROLE_GROUP 0x02      /* Adhoc network group role */
 #define PAN_ROLE_NAP_SERVER 0x04 /* NAP role */
+typedef uint8_t tPAN_ROLE;
 
-/* Bitmap to indicate the usage of the Data */
-#define PAN_DATA_TO_HOST 0x01
-#define PAN_DATA_TO_LAN 0x02
+inline const std::string pan_role_to_text(const tPAN_ROLE& role) {
+  return base::StringPrintf("%c%c%c[0x%x]",
+                            (role & PAN_ROLE_CLIENT) ? 'C' : '.',
+                            (role & PAN_ROLE_GROUP) ? 'G' : '.',
+                            (role & PAN_ROLE_NAP_SERVER) ? 'N' : '.', role);
+}
 
 /*****************************************************************************
  *  Type Definitions
  ****************************************************************************/
 
 /* Define the result codes from PAN */
-enum {
+typedef enum : uint8_t {
   PAN_SUCCESS, /* Success                           */
   PAN_DISCONNECTED = BNEP_CONN_DISCONNECTED, /* Connection terminated   */
   PAN_CONN_FAILED = BNEP_CONN_FAILED,   /* Connection failed                 */
@@ -86,10 +93,43 @@ enum {
   PAN_IGNORE_CMD = BNEP_IGNORE_CMD,       /* To ignore the rcvd command */
   PAN_TX_FLOW_ON = BNEP_TX_FLOW_ON,       /* tx data flow enabled */
   PAN_TX_FLOW_OFF = BNEP_TX_FLOW_OFF,     /* tx data flow disabled */
-  PAN_FAILURE                             /* Failure                      */
+  PAN_FAILURE = 19,                       /* Failure                      */
+  PAN_HOTSPOT_DISABLED = 20,              /* Hotspot disabled             */
+} tPAN_RESULT;
 
-};
-typedef uint8_t tPAN_RESULT;
+#define CASE_RETURN_TEXT(code) \
+  case code:                   \
+    return #code
+
+inline const std::string pan_result_text(const tPAN_RESULT& result) {
+  switch (result) {
+    CASE_RETURN_TEXT(PAN_SUCCESS);
+    CASE_RETURN_TEXT(PAN_DISCONNECTED);
+    CASE_RETURN_TEXT(PAN_CONN_FAILED);
+    CASE_RETURN_TEXT(PAN_NO_RESOURCES);
+    CASE_RETURN_TEXT(PAN_MTU_EXCEDED);
+    CASE_RETURN_TEXT(PAN_INVALID_OFFSET);
+    CASE_RETURN_TEXT(PAN_CONN_FAILED_CFG);
+    CASE_RETURN_TEXT(PAN_INVALID_SRC_ROLE);
+    CASE_RETURN_TEXT(PAN_INVALID_DST_ROLE);
+    CASE_RETURN_TEXT(PAN_CONN_FAILED_UUID_SIZE);
+    CASE_RETURN_TEXT(PAN_Q_SIZE_EXCEEDED);
+    CASE_RETURN_TEXT(PAN_TOO_MANY_FILTERS);
+    CASE_RETURN_TEXT(PAN_SET_FILTER_FAIL);
+    CASE_RETURN_TEXT(PAN_WRONG_HANDLE);
+    CASE_RETURN_TEXT(PAN_WRONG_STATE);
+    CASE_RETURN_TEXT(PAN_SECURITY_FAIL);
+    CASE_RETURN_TEXT(PAN_IGNORE_CMD);
+    CASE_RETURN_TEXT(PAN_TX_FLOW_ON);
+    CASE_RETURN_TEXT(PAN_TX_FLOW_OFF);
+    CASE_RETURN_TEXT(PAN_FAILURE);
+    CASE_RETURN_TEXT(PAN_HOTSPOT_DISABLED);
+    default:
+      return base::StringPrintf("UNKNOWN[%hhu]", result);
+  }
+}
+
+#undef CASE_RETURN_TEXT
 
 /*****************************************************************
  *       Callback Function Prototypes
@@ -160,7 +200,7 @@ typedef void(tPAN_TX_DATA_FLOW_CB)(uint16_t handle, tPAN_RESULT event);
  *                      next two bytes will be ending of the range.
 */
 typedef void(tPAN_FILTER_IND_CB)(uint16_t handle, bool indication,
-                                 tBNEP_RESULT result, uint16_t num_filters,
+                                 tPAN_RESULT result, uint16_t num_filters,
                                  uint8_t* p_filters);
 
 /* Multicast Filters received indication callback prototype. Parameters are
@@ -176,7 +216,7 @@ typedef void(tPAN_FILTER_IND_CB)(uint16_t handle, bool indication,
  *                      next six bytes will be ending of the range.
 */
 typedef void(tPAN_MFILTER_IND_CB)(uint16_t handle, bool indication,
-                                  tBNEP_RESULT result, uint16_t num_mfilters,
+                                  tPAN_RESULT result, uint16_t num_mfilters,
                                   uint8_t* p_mfilters);
 
 /* This structure is used to register with PAN profile
@@ -391,10 +431,10 @@ extern tPAN_RESULT PAN_SetProtocolFilters(uint16_t handle, uint16_t num_filters,
  *                  PAN_FAILURE     if connection not found or error in setting
  *
  ******************************************************************************/
-extern tBNEP_RESULT PAN_SetMulticastFilters(uint16_t handle,
-                                            uint16_t num_mcast_filters,
-                                            uint8_t* p_start_array,
-                                            uint8_t* p_end_array);
+extern tPAN_RESULT PAN_SetMulticastFilters(uint16_t handle,
+                                           uint16_t num_mcast_filters,
+                                           uint8_t* p_start_array,
+                                           uint8_t* p_end_array);
 
 /*******************************************************************************
  *
