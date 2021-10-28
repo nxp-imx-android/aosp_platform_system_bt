@@ -49,13 +49,21 @@ std::string ToHexString(T x) {
 }
 
 template <>
-inline std::string ToHexString<signed long>(signed long x) {
+inline std::string ToHexString<>(signed long x) {
   if (x < 0) {
     if (x == LONG_MIN) return "LONG_MIN";
     return "-" + ToHexString<signed long>(-x);
   }
   std::stringstream tmp;
   tmp << "0x" << std::internal << std::hex << std::setfill('0') << std::setw(sizeof(signed long) * 2)
+      << (unsigned long)x;
+  return tmp.str();
+}
+
+template <>
+inline std::string ToHexString<>(unsigned int x) {
+  std::stringstream tmp;
+  tmp << "0x" << std::internal << std::hex << std::setfill('0') << std::setw(sizeof(unsigned int) * 2)
       << (unsigned long)x;
   return tmp.str();
 }
@@ -98,6 +106,7 @@ std::string ToString(uint64_t value);
 std::optional<bool> BoolFromString(const std::string& str);
 std::string ToString(bool value);
 
+// Migrate this method to std::format when C++20 becomes available
 // printf like formatting to std::string
 // format must contains format information, to print a string use StringFormat("%s", str)
 template <typename... Args>
@@ -105,8 +114,8 @@ std::string StringFormat(const std::string& format, Args... args) {
   auto size = std::snprintf(nullptr, 0, format.c_str(), args...);
   ASSERT_LOG(size >= 0, "return value %d, error %d, text '%s'", size, errno, strerror(errno));
   // Add 1 for terminating null byte
-  char buffer[size + 1];
-  auto actual_size = std::snprintf(buffer, sizeof(buffer), format.c_str(), args...);
+  std::vector<char> buffer(size + 1);
+  auto actual_size = std::snprintf(buffer.data(), buffer.size(), format.c_str(), args...);
   ASSERT_LOG(
       size == actual_size,
       "asked size %d, actual size %d, error %d, text '%s'",
@@ -115,7 +124,7 @@ std::string StringFormat(const std::string& format, Args... args) {
       errno,
       strerror(errno));
   // Exclude the terminating null byte
-  return std::string(buffer, size);
+  return std::string(buffer.data(), size);
 }
 
 inline std::string StringFormatTime(const std::string& format, const struct std::tm& tm) {

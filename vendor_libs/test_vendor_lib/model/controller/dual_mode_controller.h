@@ -48,7 +48,8 @@ using ::bluetooth::hci::CommandView;
 // "Hci" to distinguish it as a controller command.
 class DualModeController : public Device {
   // The location of the config file loaded to populate controller attributes.
-  static constexpr char kControllerPropertiesFile[] = "/etc/bluetooth/controller_properties.json";
+  static constexpr char kControllerPropertiesFile[] =
+      "/vendor/etc/bluetooth/controller_properties.json";
   static constexpr uint16_t kSecurityManagerNumKeys = 15;
 
  public:
@@ -464,6 +465,12 @@ class DualModeController : public Device {
 
   // 7.8.27
   void LeReadSupportedStates(CommandView args);
+
+  // 7.8.31
+  void LeRemoteConnectionParameterRequestReply(CommandView args);
+
+  // 7.8.32
+  void LeRemoteConnectionParameterRequestNegativeReply(CommandView args);
 
   // 7.8.34
   void LeReadSuggestedDefaultDataLength(CommandView args);

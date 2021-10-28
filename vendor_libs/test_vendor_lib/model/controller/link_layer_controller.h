@@ -35,7 +35,7 @@ using ::bluetooth::hci::OpCode;
 
 class LinkLayerController {
  public:
-  static constexpr size_t kIrk_size = 16;
+  static constexpr size_t kIrkSize = 16;
 
   LinkLayerController(const DeviceProperties& properties) : properties_(properties) {}
   ErrorCode SendCommandToRemoteByAddress(
@@ -157,15 +157,22 @@ class LinkLayerController {
       bluetooth::hci::AdvertisingFilterPolicy filter_policy);
   ErrorCode LeRemoveAdvertisingSet(uint8_t set);
   ErrorCode LeClearAdvertisingSets();
-  void LeConnectionUpdateComplete(
-      bluetooth::hci::LeConnectionUpdateView connection_update_view);
-  ErrorCode LeConnectionUpdate(
-      bluetooth::hci::LeConnectionUpdateView connection_update_view);
-
-  void HandleLeConnection(AddressWithType addr, AddressWithType own_addr,
-                          uint8_t role, uint16_t connection_interval,
-                          uint16_t connection_latency,
-                          uint16_t supervision_timeout);
+  void LeConnectionUpdateComplete(uint16_t handle, uint16_t interval_min,
+                                  uint16_t interval_max, uint16_t latency,
+                                  uint16_t supervision_timeout);
+  ErrorCode LeConnectionUpdate(uint16_t handle, uint16_t interval_min,
+                               uint16_t interval_max, uint16_t latency,
+                               uint16_t supervision_timeout);
+  ErrorCode LeRemoteConnectionParameterRequestReply(
+      uint16_t connection_handle, uint16_t interval_min, uint16_t interval_max,
+      uint16_t timeout, uint16_t latency, uint16_t minimum_ce_length,
+      uint16_t maximum_ce_length);
+  ErrorCode LeRemoteConnectionParameterRequestNegativeReply(
+      uint16_t connection_handle, bluetooth::hci::ErrorCode reason);
+  uint16_t HandleLeConnection(AddressWithType addr, AddressWithType own_addr,
+                              uint8_t role, uint16_t connection_interval,
+                              uint16_t connection_latency,
+                              uint16_t supervision_timeout);
 
   bool ConnectListBusy();
   ErrorCode LeConnectListClear();
@@ -176,8 +183,8 @@ class LinkLayerController {
   bool ResolvingListBusy();
   ErrorCode LeResolvingListClear();
   ErrorCode LeResolvingListAddDevice(Address addr, uint8_t addr_type,
-                                     std::array<uint8_t, kIrk_size> peerIrk,
-                                     std::array<uint8_t, kIrk_size> localIrk);
+                                     std::array<uint8_t, kIrkSize> peerIrk,
+                                     std::array<uint8_t, kIrkSize> localIrk);
   ErrorCode LeResolvingListRemoveDevice(Address addr, uint8_t addr_type);
   bool LeResolvingListContainsDevice(Address addr, uint8_t addr_type);
   bool LeResolvingListFull();
@@ -371,6 +378,10 @@ class LinkLayerController {
   void IncomingLeConnectPacket(model::packets::LinkLayerPacketView packet);
   void IncomingLeConnectCompletePacket(
       model::packets::LinkLayerPacketView packet);
+  void IncomingLeConnectionParameterRequest(
+      model::packets::LinkLayerPacketView packet);
+  void IncomingLeConnectionParameterUpdate(
+      model::packets::LinkLayerPacketView packet);
   void IncomingLeEncryptConnection(model::packets::LinkLayerPacketView packet);
   void IncomingLeEncryptConnectionResponse(
       model::packets::LinkLayerPacketView packet);
@@ -445,9 +456,13 @@ class LinkLayerController {
   std::vector<uint8_t> le_event_mask_;
 
   std::vector<std::tuple<Address, uint8_t>> le_connect_list_;
-  std::vector<std::tuple<Address, uint8_t, std::array<uint8_t, kIrk_size>,
-                         std::array<uint8_t, kIrk_size>>>
-      le_resolving_list_;
+  struct ResolvingListEntry {
+    Address address;
+    uint8_t address_type;
+    std::array<uint8_t, kIrkSize> peer_irk;
+    std::array<uint8_t, kIrkSize> local_irk;
+  };
+  std::vector<ResolvingListEntry> le_resolving_list_;
 
   std::array<LeAdvertiser, 7> advertisers_;
 
