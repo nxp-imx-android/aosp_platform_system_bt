@@ -361,11 +361,11 @@ void OnTransmitPacketStatus(command_status_cb status_callback, void* context,
   status_callback(status, static_cast<BT_HDR*>(command->Release()), context);
 }
 
-static void transmit_command(BT_HDR* command,
+static void transmit_command(const BT_HDR* command,
                              command_complete_cb complete_callback,
                              command_status_cb status_callback, void* context) {
   CHECK(command != nullptr);
-  uint8_t* data = command->data + command->offset;
+  const uint8_t* data = command->data + command->offset;
   size_t len = command->len;
   CHECK(len >= (kCommandOpcodeSize + kCommandLengthSize));
 
@@ -395,7 +395,7 @@ static void transmit_command(BT_HDR* command,
         std::move(packet),
         bluetooth::shim::GetGdShimHandler()->BindOnce(
             OnTransmitPacketCommandComplete, complete_callback, context));
-    osi_free(command);
+    osi_free(const_cast<void*>(static_cast<const void*>(command)));
   }
 }
 
@@ -406,7 +406,8 @@ static void transmit_fragment(const uint8_t* stream, size_t length) {
       handle_with_flags >> 12 & 0b11);
   auto bc_flag =
       static_cast<bluetooth::hci::BroadcastFlag>(handle_with_flags >> 14);
-  uint16_t handle = handle_with_flags & 0xEFF;
+  uint16_t handle = handle_with_flags & 0xFFF;
+  ASSERT_LOG(handle <= 0xEFF, "Require handle <= 0xEFF, but is 0x%X", handle);
   length -= 2;
   // skip data total length
   stream += 2;
@@ -421,7 +422,8 @@ static void transmit_fragment(const uint8_t* stream, size_t length) {
 static void transmit_sco_fragment(const uint8_t* stream, size_t length) {
   uint16_t handle_with_flags;
   STREAM_TO_UINT16(handle_with_flags, stream);
-  uint16_t handle = handle_with_flags & 0xEFF;
+  uint16_t handle = handle_with_flags & 0xFFF;
+  ASSERT_LOG(handle <= 0xEFF, "Require handle <= 0xEFF, but is 0x%X", handle);
   length -= 2;
   // skip data total length
   stream += 1;
@@ -442,7 +444,8 @@ static void transmit_iso_fragment(const uint8_t* stream, size_t length) {
       handle_with_flags >> 12 & 0b11);
   auto ts_flag =
       static_cast<bluetooth::hci::TimeStampFlag>(handle_with_flags >> 14);
-  uint16_t handle = handle_with_flags & 0xEFF;
+  uint16_t handle = handle_with_flags & 0xFFF;
+  ASSERT_LOG(handle <= 0xEFF, "Require handle <= 0xEFF, but is 0x%X", handle);
   length -= 2;
   // skip data total length
   stream += 2;
@@ -674,7 +677,7 @@ void OnRustTransmitPacketStatus(command_status_cb status_callback,
   status_callback(status, static_cast<BT_HDR*>(command->Release()), context);
 }
 
-static void transmit_command(BT_HDR* command,
+static void transmit_command(const BT_HDR* command,
                              command_complete_cb complete_callback,
                              command_status_cb status_callback, void* context) {
   CHECK(command != nullptr);
@@ -702,7 +705,7 @@ static void transmit_command(BT_HDR* command,
         ::rust::Slice(data, len),
         std::make_unique<u8SliceOnceCallback>(BindOnce(
             OnRustTransmitPacketCommandComplete, complete_callback, context)));
-    osi_free(command);
+    osi_free(const_cast<void*>(static_cast<const void*>(command)));
   }
 }
 
@@ -772,7 +775,7 @@ static void set_data_cb(
   send_data_upwards = std::move(send_data_cb);
 }
 
-static void transmit_command(BT_HDR* command,
+static void transmit_command(const BT_HDR* command,
                              command_complete_cb complete_callback,
                              command_status_cb status_callback, void* context) {
   if (bluetooth::common::init_flags::gd_rust_is_enabled()) {
@@ -794,7 +797,7 @@ static void command_status_callback(uint8_t status, BT_HDR* command,
       "transmit_command_futured should only send command complete opcode");
 }
 
-static future_t* transmit_command_futured(BT_HDR* command) {
+static future_t* transmit_command_futured(const BT_HDR* command) {
   future_t* future = future_new();
   transmit_command(command, command_complete_callback, command_status_callback,
                    future);

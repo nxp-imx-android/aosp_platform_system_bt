@@ -145,7 +145,6 @@ tPAN_RESULT PAN_SetRole(uint8_t role, const char* p_user_name,
 
   /* Register all the roles with SDP */
   PAN_TRACE_API("PAN_SetRole() called with role 0x%x", role);
-#if (PAN_SUPPORTS_ROLE_NAP == TRUE)
   if (role & PAN_ROLE_NAP_SERVER) {
     /* Check the service name */
     if ((p_nap_name == NULL) || (*p_nap_name == 0))
@@ -170,9 +169,7 @@ tPAN_RESULT PAN_SetRole(uint8_t role, const char* p_user_name,
       bta_sys_remove_uuid(UUID_SERVCLASS_NAP);
     }
   }
-#endif
 
-#if (PAN_SUPPORTS_ROLE_PANU == TRUE)
   if (role & PAN_ROLE_CLIENT) {
     /* Check the service name */
     if ((p_user_name == NULL) || (*p_user_name == 0))
@@ -196,7 +193,6 @@ tPAN_RESULT PAN_SetRole(uint8_t role, const char* p_user_name,
       bta_sys_remove_uuid(UUID_SERVCLASS_PANU);
     }
   }
-#endif
 
   pan_cb.role = role;
   PAN_TRACE_EVENT("PAN role set to: %d", role);
@@ -226,8 +222,8 @@ tPAN_RESULT PAN_SetRole(uint8_t role, const char* p_user_name,
  *                                     allowed at that point of time
  *
  ******************************************************************************/
-tPAN_RESULT PAN_Connect(const RawAddress& rem_bda, uint8_t src_role,
-                        uint8_t dst_role, uint16_t* handle) {
+tPAN_RESULT PAN_Connect(const RawAddress& rem_bda, tPAN_ROLE src_role,
+                        tPAN_ROLE dst_role, uint16_t* handle) {
   uint32_t mx_chan_id;
 
   /*
