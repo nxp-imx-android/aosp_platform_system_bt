@@ -68,7 +68,7 @@ void BTIF_dm_disable();
 void BTIF_dm_enable();
 void btm_ble_adv_init(void);
 
-static void bta_dm_inq_results_cb(tBTM_INQ_RESULTS* p_inq, uint8_t* p_eir,
+static void bta_dm_inq_results_cb(tBTM_INQ_RESULTS* p_inq, const uint8_t* p_eir,
                                   uint16_t eir_len);
 static void bta_dm_inq_cmpl_cb(void* p_result);
 static void bta_dm_service_search_remname_cback(const RawAddress& bd_addr,
@@ -78,7 +78,7 @@ static void bta_dm_find_services(const RawAddress& bd_addr);
 static void bta_dm_discover_next_device(void);
 static void bta_dm_sdp_callback(tSDP_STATUS sdp_status);
 static uint8_t bta_dm_pin_cback(const RawAddress& bd_addr, DEV_CLASS dev_class,
-                                BD_NAME bd_name, bool min_16_digit);
+                                const BD_NAME bd_name, bool min_16_digit);
 static uint8_t bta_dm_new_link_key_cback(const RawAddress& bd_addr,
                                          DEV_CLASS dev_class, BD_NAME bd_name,
                                          const LinkKey& key, uint8_t key_type);
@@ -119,7 +119,7 @@ static void bta_dm_gattc_register(void);
 static void btm_dm_start_gatt_discovery(const RawAddress& bd_addr);
 static void bta_dm_cancel_gatt_discovery(const RawAddress& bd_addr);
 static void bta_dm_gattc_callback(tBTA_GATTC_EVT event, tBTA_GATTC* p_data);
-extern tBTA_DM_CONTRL_STATE bta_dm_pm_obtain_controller_state(void);
+extern tBTM_CONTRL_STATE bta_dm_pm_obtain_controller_state(void);
 #if (BLE_VND_INCLUDED == TRUE)
 static void bta_dm_ctrl_features_rd_cmpl_cback(tHCI_STATUS result);
 #endif
@@ -196,8 +196,8 @@ WaitForAllAclConnectionsToDrain::FromAlarmCallbackData(void* data) {
 
 static void bta_dm_reset_sec_dev_pending(const RawAddress& remote_bd_addr);
 static void bta_dm_remove_sec_dev_entry(const RawAddress& remote_bd_addr);
-static void bta_dm_observe_results_cb(tBTM_INQ_RESULTS* p_inq, uint8_t* p_eir,
-                                      uint16_t eir_len);
+static void bta_dm_observe_results_cb(tBTM_INQ_RESULTS* p_inq,
+                                      const uint8_t* p_eir, uint16_t eir_len);
 static void bta_dm_observe_cmpl_cb(void* p_result);
 static void bta_dm_delay_role_switch_cback(void* data);
 static void bta_dm_wait_for_acl_to_drain_cback(void* data);
@@ -1812,7 +1812,7 @@ static void bta_dm_sdp_callback(tSDP_STATUS sdp_status) {
  * Returns          void
  *
  ******************************************************************************/
-static void bta_dm_inq_results_cb(tBTM_INQ_RESULTS* p_inq, uint8_t* p_eir,
+static void bta_dm_inq_results_cb(tBTM_INQ_RESULTS* p_inq, const uint8_t* p_eir,
                                   uint16_t eir_len) {
   tBTA_DM_SEARCH result;
   tBTM_INQ_INFO* p_inq_info;
@@ -1832,7 +1832,7 @@ static void bta_dm_inq_results_cb(tBTM_INQ_RESULTS* p_inq, uint8_t* p_eir,
   result.inq_res.include_rsi = p_inq->include_rsi;
 
   /* application will parse EIR to find out remote device name */
-  result.inq_res.p_eir = p_eir;
+  result.inq_res.p_eir = const_cast<uint8_t*>(p_eir);
   result.inq_res.eir_len = eir_len;
 
   p_inq_info = BTM_InqDbRead(p_inq->remote_bd_addr);
@@ -2028,7 +2028,7 @@ static void bta_dm_pinname_cback(void* p_data) {
  *
  ******************************************************************************/
 static uint8_t bta_dm_pin_cback(const RawAddress& bd_addr, DEV_CLASS dev_class,
-                                BD_NAME bd_name, bool min_16_digit) {
+                                const BD_NAME bd_name, bool min_16_digit) {
   if (!bta_dm_cb.p_sec_cback) return BTM_NOT_AUTHORIZED;
 
   /* If the device name is not known, save bdaddr and devclass and initiate a
@@ -3314,8 +3314,8 @@ bool bta_dm_check_if_only_hd_connected(const RawAddress& peer_addr) {
  * Returns          void
  *
  ******************************************************************************/
-static void bta_dm_observe_results_cb(tBTM_INQ_RESULTS* p_inq, uint8_t* p_eir,
-                                      uint16_t eir_len) {
+static void bta_dm_observe_results_cb(tBTM_INQ_RESULTS* p_inq,
+                                      const uint8_t* p_eir, uint16_t eir_len) {
   tBTA_DM_SEARCH result;
   tBTM_INQ_INFO* p_inq_info;
   APPL_TRACE_DEBUG("bta_dm_observe_results_cb");
@@ -3334,7 +3334,7 @@ static void bta_dm_observe_results_cb(tBTM_INQ_RESULTS* p_inq, uint8_t* p_eir,
   result.inq_res.ble_periodic_adv_int = p_inq->ble_periodic_adv_int;
 
   /* application will parse EIR to find out remote device name */
-  result.inq_res.p_eir = p_eir;
+  result.inq_res.p_eir = const_cast<uint8_t*>(p_eir);
   result.inq_res.eir_len = eir_len;
 
   p_inq_info = BTM_InqDbRead(p_inq->remote_bd_addr);
@@ -3366,7 +3366,7 @@ static void bta_dm_observe_results_cb(tBTM_INQ_RESULTS* p_inq, uint8_t* p_eir,
  *
  ******************************************************************************/
 static void bta_dm_opportunistic_observe_results_cb(tBTM_INQ_RESULTS* p_inq,
-                                                    uint8_t* p_eir,
+                                                    const uint8_t* p_eir,
                                                     uint16_t eir_len) {
   tBTA_DM_SEARCH result;
   tBTM_INQ_INFO* p_inq_info;
@@ -3385,7 +3385,7 @@ static void bta_dm_opportunistic_observe_results_cb(tBTM_INQ_RESULTS* p_inq,
   result.inq_res.ble_periodic_adv_int = p_inq->ble_periodic_adv_int;
 
   /* application will parse EIR to find out remote device name */
-  result.inq_res.p_eir = p_eir;
+  result.inq_res.p_eir = const_cast<uint8_t*>(p_eir);
   result.inq_res.eir_len = eir_len;
 
   p_inq_info = BTM_InqDbRead(p_inq->remote_bd_addr);
@@ -3830,7 +3830,7 @@ static void bta_ble_energy_info_cmpl(tBTM_BLE_TX_TIME_MS tx_time,
                                      tBTM_BLE_ENERGY_USED energy_used,
                                      tHCI_STATUS status) {
   tBTA_STATUS st = (status == HCI_SUCCESS) ? BTA_SUCCESS : BTA_FAILURE;
-  tBTA_DM_CONTRL_STATE ctrl_state = 0;
+  tBTM_CONTRL_STATE ctrl_state = BTM_CONTRL_UNKNOWN;
 
   if (BTA_SUCCESS == st) ctrl_state = bta_dm_pm_obtain_controller_state();
 

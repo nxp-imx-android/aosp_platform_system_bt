@@ -414,6 +414,12 @@ class LeAudioClientImpl : public LeAudioClient {
                                    group_id);
   }
 
+  void remove_group_if_possible(LeAudioDeviceGroup* group) {
+    if (group && group->IsEmpty() && !group->cig_created_) {
+      aseGroups_.Remove(group->group_id_);
+    }
+  }
+
   void group_remove_node(LeAudioDeviceGroup* group, const RawAddress& address,
                          bool update_group_module = false) {
     int group_id = group->group_id_;
@@ -431,8 +437,7 @@ class LeAudioClientImpl : public LeAudioClient {
 
     /* Remove group if this was the last leAudioDevice in this group */
     if (group->IsEmpty()) {
-      aseGroups_.Remove(group_id);
-
+      remove_group_if_possible(group);
       return;
     }
 
@@ -657,6 +662,12 @@ class LeAudioClientImpl : public LeAudioClient {
       return;
     }
 
+    if (leAudioDevice->conn_id_ != GATT_INVALID_CONN_ID) {
+      Disconnect(address);
+      leAudioDevice->removing_device_ = true;
+      return;
+    }
+
     /* Remove the group assignment if not yet removed. It might happen that the
      * group module has already called the appropriate callback and we have
      * already removed the group assignment.
@@ -664,12 +675,6 @@ class LeAudioClientImpl : public LeAudioClient {
     if (leAudioDevice->group_id_ != bluetooth::groups::kGroupUnknown) {
       auto group = aseGroups_.FindById(leAudioDevice->group_id_);
       group_remove_node(group, address, true);
-    }
-
-    if (leAudioDevice->conn_id_ != GATT_INVALID_CONN_ID) {
-      Disconnect(address);
-      leAudioDevice->removing_device_ = true;
-      return;
     }
 
     leAudioDevices_.Remove(address);
@@ -718,7 +723,30 @@ class LeAudioClientImpl : public LeAudioClient {
       group_add_node(group_id, address);
     }
 
-    if (autoconnect) Connect(address);
+    if (autoconnect) {
+      BTA_GATTC_Open(gatt_if_, address, false, false);
+    }
+  }
+
+  void BackgroundConnectIfGroupConnected(LeAudioDevice* leAudioDevice) {
+    DLOG(INFO) << __func__ << leAudioDevice->address_ ;
+    auto group = aseGroups_.FindById(leAudioDevice->group_id_);
+    if (!group) {
+      DLOG(INFO) << __func__ << " Device is not yet part of the group. ";
+      return;
+    }
+
+    if (!group->IsAnyDeviceConnected()) {
+      DLOG(INFO) << __func__ << " group: " << leAudioDevice->group_id_
+                 << " is not connected";
+      return;
+    }
+
+    DLOG(INFO) << __func__ << "Add " << leAudioDevice->address_
+               << " to background connect to connected group: "
+               << leAudioDevice->group_id_;
+
+    BTA_GATTC_Open(gatt_if_, leAudioDevice->address_, false, false);
   }
 
   void Disconnect(const RawAddress& address) override {
@@ -731,19 +759,23 @@ class LeAudioClientImpl : public LeAudioClient {
     }
 
     /* cancel pending direct connect */
-    if (leAudioDevice->connecting_actively_)
+    if (leAudioDevice->connecting_actively_) {
       BTA_GATTC_CancelOpen(gatt_if_, address, true);
+      leAudioDevice->connecting_actively_ = false;
+    }
 
     /* Removes all registrations for connection */
     BTA_GATTC_CancelOpen(0, address, false);
 
-    if (leAudioDevice->conn_id_ == GATT_INVALID_CONN_ID) {
-      LOG(ERROR) << __func__ << ", leAudioDevice not connected (" << address
-                 << ")";
+    if (leAudioDevice->conn_id_ != GATT_INVALID_CONN_ID) {
+      DisconnectDevice(leAudioDevice);
       return;
     }
 
-    DisconnectDevice(leAudioDevice);
+    /* If this is a device which is a part of the group which is connected,
+     * lets start backgroup connect
+     */
+    BackgroundConnectIfGroupConnected(leAudioDevice);
   }
 
   void DisconnectDevice(LeAudioDevice* leAudioDevice,
@@ -1154,7 +1186,13 @@ class LeAudioClientImpl : public LeAudioClient {
     leAudioDevice->conn_id_ = GATT_INVALID_CONN_ID;
     leAudioDevice->encrypted_ = false;
 
-    if (leAudioDevice->removing_device_) leAudioDevices_.Remove(address);
+    if (leAudioDevice->removing_device_) {
+      if (leAudioDevice->group_id_ != bluetooth::groups::kGroupUnknown) {
+        auto group = aseGroups_.FindById(leAudioDevice->group_id_);
+        group_remove_node(group, address, true);
+      }
+      leAudioDevices_.Remove(address);
+    }
   }
 
   bool subscribe_for_indications(uint16_t conn_id, const RawAddress& address,
@@ -2130,15 +2168,23 @@ class LeAudioClientImpl : public LeAudioClient {
             context_type, le_audio::types::kLeAudioDirectionSource);
 
     if (source_configuration) {
+      bool send_active = false;
       /* Stream configuration differs from previous one */
       if (!current_source_codec_config.IsInvalid() &&
-          (*source_configuration != current_source_codec_config))
+          (*source_configuration != current_source_codec_config)) {
+        callbacks_->OnGroupStatus(group_id, GroupStatus::INACTIVE);
+        send_active = true;
         LeAudioClientAudioSource::Stop();
+      }
 
       current_source_codec_config = *source_configuration;
 
       LeAudioClientAudioSource::Start(current_source_codec_config,
                                       audioSinkReceiver);
+      if (send_active) {
+        callbacks_->OnGroupStatus(group_id, GroupStatus::ACTIVE);
+      }
+
     } else {
       if (!current_source_codec_config.IsInvalid()) {
         LeAudioClientAudioSource::Stop();
@@ -2152,15 +2198,22 @@ class LeAudioClientImpl : public LeAudioClient {
     }
 
     if (sink_configuration) {
+      bool send_active = false;
       /* Stream configuration differs from previous one */
       if (!current_sink_codec_config.IsInvalid() &&
-          (*sink_configuration != current_sink_codec_config))
+          (*sink_configuration != current_sink_codec_config)) {
+        callbacks_->OnGroupStatus(group_id, GroupStatus::INACTIVE);
+        send_active = true;
         LeAudioClientAudioSink::Stop();
+      }
 
       current_sink_codec_config = *sink_configuration;
 
       LeAudioClientAudioSink::Start(current_sink_codec_config,
                                     audioSourceReceiver);
+      if (send_active) {
+        callbacks_->OnGroupStatus(group_id, GroupStatus::ACTIVE);
+      }
     } else {
       if (!current_sink_codec_config.IsInvalid()) {
         LeAudioClientAudioSink::Stop();
@@ -2482,6 +2535,7 @@ class LeAudioClientImpl : public LeAudioClient {
         auto* evt = static_cast<cig_remove_cmpl_evt*>(data);
         LeAudioDeviceGroup* group = aseGroups_.FindById(evt->cig_id);
         groupStateMachine_->ProcessHciNotifOnCigRemove(evt->status, group);
+        remove_group_if_possible(group);
       } break;
       default:
         LOG(ERROR) << __func__ << " Invalid event " << int{event_type};

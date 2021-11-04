@@ -36,6 +36,7 @@
 #include <hardware/bt_csis.h>
 #include <hardware/bt_hearing_aid.h>
 #include <hardware/bt_le_audio.h>
+#include <hardware/bt_vc.h>
 #include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -51,6 +52,7 @@
 #include "bta_dm_int.h"
 #include "bta_gatt_api.h"
 #include "bta_le_audio_api.h"
+#include "bta_vc_api.h"
 #include "btif/include/stack_manager.h"
 #include "btif_api.h"
 #include "btif_av.h"
@@ -250,6 +252,8 @@ btif_hearing_aid_get_interface();
 extern bluetooth::csis::CsisClientInterface* btif_csis_client_get_interface();
 extern bluetooth::le_audio::LeAudioClientInterface*
 btif_le_audio_get_interface();
+extern bluetooth::vc::VolumeControlInterface*
+btif_volume_control_get_interface();
 
 /******************************************************************************
  *  Functions
@@ -1598,6 +1602,10 @@ static void btif_dm_upstreams_evt(uint16_t event, char* p_param) {
       if (LeAudioClient::IsLeAudioClientRunning())
         btif_le_audio_get_interface()->RemoveDevice(bd_addr);
 
+      if (VolumeControl::IsVolumeControlRunning()) {
+        btif_volume_control_get_interface()->RemoveDevice(bd_addr);
+      }
+
       btif_storage_remove_bonded_device(&bd_addr);
       bond_state_changed(BT_STATUS_SUCCESS, bd_addr, BT_BOND_STATE_NONE);
       break;
@@ -1792,7 +1800,7 @@ static void bta_energy_info_cb(tBTM_BLE_TX_TIME_MS tx_time,
                                tBTM_BLE_RX_TIME_MS rx_time,
                                tBTM_BLE_IDLE_TIME_MS idle_time,
                                tBTM_BLE_ENERGY_USED energy_used,
-                               tBTA_DM_CONTRL_STATE ctrl_state,
+                               tBTM_CONTRL_STATE ctrl_state,
                                tBTA_STATUS status) {
   BTIF_TRACE_DEBUG(
       "energy_info_cb-Status:%d,state=%d,tx_t=%ld, rx_t=%ld, "

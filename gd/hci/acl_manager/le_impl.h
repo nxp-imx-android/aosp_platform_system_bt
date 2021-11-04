@@ -625,6 +625,10 @@ struct le_impl : public bluetooth::hci::LeAddressManagerCallback {
     }
   }
 
+  void clear_resolving_list() {
+    le_address_manager_->ClearResolvingList();
+  }
+
   void set_privacy_policy_for_initiator_address(
       LeAddressManager::AddressPolicy address_policy,
       AddressWithType fixed_address,
@@ -632,7 +636,12 @@ struct le_impl : public bluetooth::hci::LeAddressManagerCallback {
       std::chrono::milliseconds minimum_rotation_time,
       std::chrono::milliseconds maximum_rotation_time) {
     le_address_manager_->SetPrivacyPolicyForInitiatorAddress(
-        address_policy, fixed_address, rotation_irk, minimum_rotation_time, maximum_rotation_time);
+        address_policy,
+        fixed_address,
+        rotation_irk,
+        controller_->SupportsBlePrivacy(),
+        minimum_rotation_time,
+        maximum_rotation_time);
   }
 
   // TODO(jpawlowski): remove once we have config file abstraction in cert tests

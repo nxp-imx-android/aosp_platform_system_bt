@@ -477,15 +477,11 @@ typedef void(tBTA_DM_ENCRYPT_CBACK)(const RawAddress& bd_addr,
                                     tBT_TRANSPORT transport,
                                     tBTA_STATUS result);
 
-#define BTA_DM_CONTRL_UNKNOWN 0 /* Unknown state */
-
-typedef uint8_t tBTA_DM_CONTRL_STATE;
-
 typedef void(tBTA_BLE_ENERGY_INFO_CBACK)(tBTM_BLE_TX_TIME_MS tx_time,
                                          tBTM_BLE_RX_TIME_MS rx_time,
                                          tBTM_BLE_IDLE_TIME_MS idle_time,
                                          tBTM_BLE_ENERGY_USED energy_used,
-                                         tBTA_DM_CONTRL_STATE ctrl_state,
+                                         tBTM_CONTRL_STATE ctrl_state,
                                          tBTA_STATUS status);
 
 /* Maximum service name length */
@@ -866,7 +862,7 @@ extern tBTA_STATUS BTA_DmRemoveDevice(const RawAddress& bd_addr);
  * Returns          None
  *
  ******************************************************************************/
-extern void BTA_GetEirService(uint8_t* p_eir, size_t eir_len,
+extern void BTA_GetEirService(const uint8_t* p_eir, size_t eir_len,
                               tBTA_SERVICE_MASK* p_services);
 
 /*******************************************************************************
