@@ -16,23 +16,32 @@
 
 #pragma once
 
+#include <memory>
+
 #include "btif/include/btif_hf.h"
+#include "include/hardware/bluetooth_headset_callbacks.h"
+#include "types/raw_address.h"
 
 namespace bluetooth {
 namespace topshim {
 namespace rust {
 
+struct RustRawAddress;
+
 class HfpIntf {
  public:
-  // interface for Settings
+  HfpIntf(headset::Interface* intf) : intf_(intf){};
+
   int init();
+  int connect(RustRawAddress bt_addr);
+  int disconnect(RustRawAddress bt_addr);
   void cleanup();
 
  private:
-  bluetooth::headset::Interface* intf_ = nullptr;
+  headset::Interface* intf_;
 };
 
-std::unique_ptr<HfpIntf> GetHfpProfile();
+std::unique_ptr<HfpIntf> GetHfpProfile(const unsigned char* btif);
 
 }  // namespace rust
 }  // namespace topshim

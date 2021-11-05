@@ -366,53 +366,6 @@ void BTM_RemoveEirService(uint32_t* p_eir_uuid, uint16_t uuid16);
 
 /*******************************************************************************
  *
- * Function         BTM_GetEirSupportedServices
- *
- * Description      This function is called to get UUID list from bit map UUID
- *                  list.
- *
- * Parameters       p_eir_uuid - bit mask of UUID list for EIR
- *                  p - reference of current pointer of EIR
- *                  max_num_uuid16 - max number of UUID can be written in EIR
- *                  num_uuid16 - number of UUID have been written in EIR
- *
- * Returns          HCI_EIR_MORE_16BITS_UUID_TYPE, if it has more than max
- *                  HCI_EIR_COMPLETE_16BITS_UUID_TYPE, otherwise
- *
- ******************************************************************************/
-uint8_t BTM_GetEirSupportedServices(uint32_t* p_eir_uuid, uint8_t** p,
-                                    uint8_t max_num_uuid16,
-                                    uint8_t* p_num_uuid16);
-
-/*******************************************************************************
- *
- * Function         BTM_GetEirUuidList
- *
- * Description      This function parses EIR and returns UUID list.
- *
- * Parameters       p_eir - EIR
- *                  eirl_len - EIR len
- *                  uuid_size - Uuid::kNumBytes16, Uuid::kNumBytes32,
- *                              Uuid::kNumBytes128
- *                  p_num_uuid - return number of UUID in found list
- *                  p_uuid_list - return UUID 16-bit list
- *                  max_num_uuid - maximum number of UUID to be returned
- *
- * Returns          0 - if not found
- *                  HCI_EIR_COMPLETE_16BITS_UUID_TYPE
- *                  HCI_EIR_MORE_16BITS_UUID_TYPE
- *                  HCI_EIR_COMPLETE_32BITS_UUID_TYPE
- *                  HCI_EIR_MORE_32BITS_UUID_TYPE
- *                  HCI_EIR_COMPLETE_128BITS_UUID_TYPE
- *                  HCI_EIR_MORE_128BITS_UUID_TYPE
- *
- ******************************************************************************/
-uint8_t BTM_GetEirUuidList(uint8_t* p_eir, size_t eir_len, uint8_t uuid_size,
-                           uint8_t* p_num_uuid, uint8_t* p_uuid_list,
-                           uint8_t max_num_uuid);
-
-/*******************************************************************************
- *
  * Function         BTM_SecAddBleDevice
  *
  * Description      Add/modify device.  This function will be normally called

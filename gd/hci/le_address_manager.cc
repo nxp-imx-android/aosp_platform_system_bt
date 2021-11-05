@@ -48,12 +48,14 @@ void LeAddressManager::SetPrivacyPolicyForInitiatorAddress(
     AddressPolicy address_policy,
     AddressWithType fixed_address,
     crypto_toolbox::Octet16 rotation_irk,
+    bool supports_ble_privacy,
     std::chrono::milliseconds minimum_rotation_time,
     std::chrono::milliseconds maximum_rotation_time) {
   ASSERT(address_policy_ == AddressPolicy::POLICY_NOT_SET);
   ASSERT(address_policy != AddressPolicy::POLICY_NOT_SET);
   ASSERT_LOG(registered_clients_.empty(), "Policy must be set before clients are registered.");
   address_policy_ = address_policy;
+  supports_ble_privacy_ = supports_ble_privacy;
   LOG_INFO("SetPrivacyPolicyForInitiatorAddress with policy %d", address_policy);
 
   switch (address_policy_) {
@@ -381,10 +383,29 @@ void LeAddressManager::AddDeviceToResolvingList(
     Address peer_identity_address,
     const std::array<uint8_t, 16>& peer_irk,
     const std::array<uint8_t, 16>& local_irk) {
+  // Disable Address resolution
+  auto disable_builder = hci::LeSetAddressResolutionEnableBuilder::Create(hci::Enable::DISABLED);
+  Command disable = {CommandType::SET_ADDRESS_RESOLUTION_ENABLE, std::move(disable_builder)};
+  cached_commands_.push(std::move(disable));
+
   auto packet_builder = hci::LeAddDeviceToResolvingListBuilder::Create(
       peer_identity_address_type, peer_identity_address, peer_irk, local_irk);
   Command command = {CommandType::ADD_DEVICE_TO_RESOLVING_LIST, std::move(packet_builder)};
-  handler_->BindOnceOn(this, &LeAddressManager::push_command, std::move(command)).Invoke();
+  cached_commands_.push(std::move(command));
+
+  if (supports_ble_privacy_) {
+    auto packet_builder =
+        hci::LeSetPrivacyModeBuilder::Create(peer_identity_address_type, peer_identity_address, PrivacyMode::DEVICE);
+    Command command = {CommandType::LE_SET_PRIVACY_MODE, std::move(packet_builder)};
+    cached_commands_.push(std::move(command));
+  }
+
+  // Enable Address resolution
+  auto enable_builder = hci::LeSetAddressResolutionEnableBuilder::Create(hci::Enable::ENABLED);
+  Command enable = {CommandType::SET_ADDRESS_RESOLUTION_ENABLE, std::move(enable_builder)};
+  cached_commands_.push(std::move(enable));
+
+  pause_registered_clients();
 }
 
 void LeAddressManager::RemoveDeviceFromConnectList(
@@ -396,10 +417,22 @@ void LeAddressManager::RemoveDeviceFromConnectList(
 
 void LeAddressManager::RemoveDeviceFromResolvingList(
     PeerAddressType peer_identity_address_type, Address peer_identity_address) {
+  // Disable Address resolution
+  auto disable_builder = hci::LeSetAddressResolutionEnableBuilder::Create(hci::Enable::DISABLED);
+  Command disable = {CommandType::SET_ADDRESS_RESOLUTION_ENABLE, std::move(disable_builder)};
+  cached_commands_.push(std::move(disable));
+
   auto packet_builder =
       hci::LeRemoveDeviceFromResolvingListBuilder::Create(peer_identity_address_type, peer_identity_address);
   Command command = {CommandType::REMOVE_DEVICE_FROM_RESOLVING_LIST, std::move(packet_builder)};
-  handler_->BindOnceOn(this, &LeAddressManager::push_command, std::move(command)).Invoke();
+  cached_commands_.push(std::move(command));
+
+  // Enable Address resolution
+  auto enable_builder = hci::LeSetAddressResolutionEnableBuilder::Create(hci::Enable::ENABLED);
+  Command enable = {CommandType::SET_ADDRESS_RESOLUTION_ENABLE, std::move(enable_builder)};
+  cached_commands_.push(std::move(enable));
+
+  pause_registered_clients();
 }
 
 void LeAddressManager::ClearConnectList() {
@@ -409,9 +442,21 @@ void LeAddressManager::ClearConnectList() {
 }
 
 void LeAddressManager::ClearResolvingList() {
+  // Disable Address resolution
+  auto disable_builder = hci::LeSetAddressResolutionEnableBuilder::Create(hci::Enable::DISABLED);
+  Command disable = {CommandType::SET_ADDRESS_RESOLUTION_ENABLE, std::move(disable_builder)};
+  cached_commands_.push(std::move(disable));
+
   auto packet_builder = hci::LeClearResolvingListBuilder::Create();
   Command command = {CommandType::CLEAR_RESOLVING_LIST, std::move(packet_builder)};
-  handler_->BindOnceOn(this, &LeAddressManager::push_command, std::move(command)).Invoke();
+  cached_commands_.push(std::move(command));
+
+  // Enable Address resolution
+  auto enable_builder = hci::LeSetAddressResolutionEnableBuilder::Create(hci::Enable::ENABLED);
+  Command enable = {CommandType::SET_ADDRESS_RESOLUTION_ENABLE, std::move(enable_builder)};
+  cached_commands_.push(std::move(enable));
+
+  pause_registered_clients();
 }
 
 void LeAddressManager::OnCommandComplete(bluetooth::hci::CommandCompleteView view) {

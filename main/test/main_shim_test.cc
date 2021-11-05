@@ -61,6 +61,8 @@ using namespace testing;
 namespace test = bluetooth::hci::testing;
 
 const uint8_t kMaxLeAcceptlistSize = 16;
+const uint8_t kMaxAddressResolutionSize = kMaxLeAcceptlistSize;
+
 std::map<std::string, int> mock_function_count_map;
 tL2C_CB l2cb;
 tBTM_CB btm_cb;
@@ -169,9 +171,6 @@ const shim::legacy::acl_interface_t GetMockAclInterface() {
   return acl_interface;
 }
 
-const hci_packet_factory_t* hci_packet_factory_get_interface() {
-  return nullptr;
-}
 const hci_packet_parser_t* hci_packet_parser_get_interface() { return nullptr; }
 const hci_t* hci_layer_get_interface() { return nullptr; }
 const packet_fragmenter_t* packet_fragmenter_get_interface() { return nullptr; }
@@ -307,7 +306,8 @@ class MainShimTest : public testing::Test {
                 UnregisterCompletedMonitorAclPacketsCallback)
         .Times(1);
     return std::make_unique<shim::legacy::Acl>(handler_, GetMockAclInterface(),
-                                               kMaxLeAcceptlistSize);
+                                               kMaxLeAcceptlistSize,
+                                               kMaxAddressResolutionSize);
   }
 };
 

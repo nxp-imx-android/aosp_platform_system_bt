@@ -106,7 +106,7 @@ class StorageModule : public bluetooth::Module {
   Mutation Modify();
 
  protected:
-  void ListDependencies(ModuleList* list) override;
+  void ListDependencies(ModuleList* list) const override;
   void Start() override;
   void Stop() override;
   std::string ToString() const override;
@@ -145,6 +145,7 @@ class StorageModule : public bluetooth::Module {
   size_t temp_devices_capacity_;
   bool is_restricted_mode_;
   bool is_single_user_mode_;
+  static bool is_config_checksum_pass(int check_bit);
 
   DISALLOW_COPY_AND_ASSIGN(StorageModule);
 };

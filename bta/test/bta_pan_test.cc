@@ -14,28 +14,24 @@
  * limitations under the License.
  */
 
-/*
- * Generated mock file from original source file
- *   Functions generated:3
- */
+#include <gtest/gtest.h>
+#include <string.h>
 
+#include <cstdint>
 #include <map>
+#include <memory>
 #include <string>
 
+#include "bta/pan/bta_pan_int.h"
+
+// TODO put this in common place
 extern std::map<std::string, int> mock_function_count_map;
 
-#include "hci/include/hci_packet_parser.h"
+class BtaPanTest : public ::testing::Test {
+ protected:
+  void SetUp() override {}
 
-#ifndef UNUSED_ATTR
-#define UNUSED_ATTR
-#endif
+  void TearDown() override {}
+};
 
-const hci_packet_parser_t* hci_packet_parser_get_interface() {
-  mock_function_count_map[__func__]++;
-  return nullptr;
-}
-const hci_packet_parser_t* hci_packet_parser_get_test_interface(
-    allocator_t* buffer_allocator_interface) {
-  mock_function_count_map[__func__]++;
-  return nullptr;
-}
+TEST_F(BtaPanTest, nop) {}

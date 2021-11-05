@@ -65,7 +65,11 @@ typedef enum : uint8_t {
 #define BTA_BIP_SERVICE_ID 13        /* Basic Imaging profile */
 #define BTA_A2DP_SINK_SERVICE_ID 18  /* A2DP Sink */
 #define BTA_HID_SERVICE_ID 20        /* HID */
+#define BTA_PBAP_SERVICE_ID 22       /* PhoneBook Access Server*/
 #define BTA_HFP_HS_SERVICE_ID 24     /* HSP HS role */
+#define BTA_MAP_SERVICE_ID 25        /* Message Access Profile */
+#define BTA_MN_SERVICE_ID 26         /* Message Notification Service */
+#define BTA_PCE_SERVICE_ID 28        /* PhoneBook Access Client */
 #define BTA_SDP_SERVICE_ID 29        /* SDP Search */
 #define BTA_HIDD_SERVICE_ID 30       /* HID Device */
 
@@ -477,15 +481,11 @@ typedef void(tBTA_DM_ENCRYPT_CBACK)(const RawAddress& bd_addr,
                                     tBT_TRANSPORT transport,
                                     tBTA_STATUS result);
 
-#define BTA_DM_CONTRL_UNKNOWN 0 /* Unknown state */
-
-typedef uint8_t tBTA_DM_CONTRL_STATE;
-
 typedef void(tBTA_BLE_ENERGY_INFO_CBACK)(tBTM_BLE_TX_TIME_MS tx_time,
                                          tBTM_BLE_RX_TIME_MS rx_time,
                                          tBTM_BLE_IDLE_TIME_MS idle_time,
                                          tBTM_BLE_ENERGY_USED energy_used,
-                                         tBTA_DM_CONTRL_STATE ctrl_state,
+                                         tBTM_CONTRL_STATE ctrl_state,
                                          tBTA_STATUS status);
 
 /* Maximum service name length */
@@ -866,7 +866,7 @@ extern tBTA_STATUS BTA_DmRemoveDevice(const RawAddress& bd_addr);
  * Returns          None
  *
  ******************************************************************************/
-extern void BTA_GetEirService(uint8_t* p_eir, size_t eir_len,
+extern void BTA_GetEirService(const uint8_t* p_eir, size_t eir_len,
                               tBTA_SERVICE_MASK* p_services);
 
 /*******************************************************************************

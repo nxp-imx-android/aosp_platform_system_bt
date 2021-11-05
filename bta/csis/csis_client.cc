@@ -387,7 +387,8 @@ class CsisClientImpl : public CsisClient {
     BtaGattQueue::WriteCharacteristic(
         device->conn_id, csis_instance->svc_data.lock_handle.val_hdl, value,
         GATT_WRITE,
-        [](uint16_t conn_id, tGATT_STATUS status, uint16_t handle, void* data) {
+        [](uint16_t conn_id, tGATT_STATUS status, uint16_t handle, uint16_t len,
+           const uint8_t* value, void* data) {
           if (instance)
             instance->OnGattCsisWriteLockRsp(conn_id, status, handle, data);
         },
@@ -1080,9 +1081,8 @@ class CsisClientImpl : public CsisClient {
                 p_service_data + service_data_len,
                 (remaining_data_len -= service_data_len), BTM_BLE_AD_TYPE_RSI,
                 &service_data_len))) {
-      uint8_t* p = (uint8_t*)(p_service_data);
       RawAddress bda;
-      STREAM_TO_BDADDR(bda, p);
+      STREAM_TO_BDADDR(bda, p_service_data);
       devices.push_back(std::move(bda));
     }
 
@@ -1810,7 +1810,7 @@ class CsisClientImpl : public CsisClient {
     BtaGattQueue::WriteDescriptor(
         conn_id, ccc_handle, std::move(value), GATT_WRITE,
         [](uint16_t conn_id, tGATT_STATUS status, uint16_t value_handle,
-           void* user_data) {
+           uint16_t len, const uint8_t* value, void* user_data) {
           if (instance)
             instance->OnGattWriteCcc(conn_id, status, value_handle, user_data);
         },

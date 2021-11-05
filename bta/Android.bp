@@ -216,10 +216,14 @@ cc_test {
         "hh/bta_hh_le.cc",
         "hh/bta_hh_main.cc",
         "hh/bta_hh_utils.cc",
+        "pan/bta_pan_act.cc",
+        "pan/bta_pan_api.cc",
+        "pan/bta_pan_main.cc",
         "sys/bta_sys_conn.cc",
         "sys/bta_sys_main.cc",
         "test/bta_dm_test.cc",
         "test/bta_gatt_test.cc",
+        "test/bta_pan_test.cc",
     ],
     shared_libs: [
         "libcrypto",
@@ -380,10 +384,12 @@ cc_test {
         "system/bt/stack/include",
     ],
     srcs : [
+        ":TestMockOsi",
         "gatt/database.cc",
         "gatt/database_builder.cc",
         "test/common/bta_gatt_api_mock.cc",
         "test/common/bta_gatt_queue_mock.cc",
+        "test/common/mock_csis_client.cc",
         "test/common/btm_api_mock.cc",
         "vc/devices_test.cc",
         "vc/device.cc",
@@ -399,6 +405,7 @@ cc_test {
         "libgmock",
         "libbt-common",
         "libbt-protos-lite",
+        "libosi"
     ],
     sanitize: {
         cfi: false,
